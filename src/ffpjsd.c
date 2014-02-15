@@ -28,7 +28,7 @@
 
 
 char PROG_NAME[FILENAME_MAX];/**< Program name */
-#define TAXANAMELEN 10 /**< Maximum length string that can be used in a phylip format taxa name*/
+#define TAXANAMELEN 50 /**< Maximum length string that can be used in a phylip format taxa name*/
 #define DEFAULT_PRECISION 2 /**< Default precision for floating point output */
 #define DEFAULT_NORM 2 /**< Default Norm for the Euclidean Distance Function */
 #define STR_BUFF 255

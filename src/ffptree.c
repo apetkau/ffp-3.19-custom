@@ -33,8 +33,8 @@
 #include "../config.h"
 
 #define FNMLNGTH        200  /* length of array to store a file name */
-#define NMLNGTH         10   /* number of characters in species name    */
-#define MAXNCH          20   /* must be greater than or equal to NMLNGTH */
+#define NMLNGTH         50   /* number of characters in species name    */
+#define MAXNCH          60   /* must be greater than or equal to NMLNGTH */
 #define MAX_COL_NEWICK 55    /* Maximum characters output per line in outtree */
                              /* The last line seems to ignore this limit */
 #define SMALL_TREE_TH 10     /* Threshold for drawing tree with -- vs - or "  " vs " " */
