@@ -1,0 +1,129 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffpcomplex 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffpcomplex - This program filters FFP profiles based on the complexity of features.
+.SH SYNOPSIS
+.BI "ffpcomplex [" "OPTION" "] ... [" "FILE" "] ..."
+.SH DESCRIPTION
+.PP
+This utility can be used to filter high or low complexity features
+from the FFP matrix. The upper and/or lower limits can be set 
+using a complexity cuttoff (the default) or a probability cutoff can be used
+assuming a normal  distribution.  Probability limits are
+the cummulative probability values from the normal distribution
+found from the calculated mean and stdev of the input FFP. 
+Requires key-valued FFP input.
+FFPs will be read from standard input if no options are supplied and 
+.B ffpcomplex  
+is called non-interactively (i.e. as part of a pipeline) or with a "-" in the 
+argument list. The default input type is assumed to be nucleotide sequence.
+.SH OPTIONS
+.TP
+.B -s, --stats
+.PP
+Print statistics describing the FFP complexity distribution to
+standard error.
+.TP
+.BI "-u " "FLOAT, " "--upper=" "FLOAT"
+.PP
+.RI "The upper threshold limit for feature complexity where " "FLOAT" " can be "
+.RI "any complexity value or for probability distributions, in which case" " FLOAT "
+can range from 0 to 1 -- representing the probability in a cummulative distribution
+function.
+.RB "This can be used in conjunction with " "-l" " or by itself."
+.TP
+.BI "-l " "FLOAT, " "--lower=" "FLOAT"
+.PP
+.RB "The lower threshold limit. This can be used in conjuntion with " "-u" " or by itself."
+.TP
+.B -n, --norm
+.PP
+Use a normal distribution for filtering. Default is the raw complexity values.
+.TP 
+.B -d, --disable
+.PP
+Disable classing of amino acid and nucleotide sequences. 
+.TP
+.B -a, --amino
+.PP
+Input FFPs are animo acid sequences.
+.TP
+.B -t, --text
+.PP
+Input FFPs are text.
+.TP
+.B -h, --help
+.PP
+Display short help message.
+.TP
+.B -v, --version
+.PP
+Display version information.
+.PP
+.SH EXAMPLES
+The main usage of this progam is for filtering out low complexity
+features, for example features which primarily represent repetitive
+DNA might be need to be filtered out -- since they don't provide much
+useful phylogenetic signal. To get an idea about what the complexity
+of the words in your FFPs are you can use the 
+.B \-s 
+option to get a statistical report, which includes the mean, range
+and standard deviation of complexity.  The complexity of a feature
+is determined by finding the total entropy of all individual sub features
+for all 
+.I k
+less than 
+.I l,
+which is the length of the feature.  For example given the feature
+.PP
+.CODE GCGCGCGC
+.PP 
+determine the entropy of 
+.IR "k" "=1,"
+which which is H(1) = f(G)log f(G) + f(C)log f(C).  Next determine the entropy
+of all 
+.iR "k" "=2," 
+sub-mers, H(2) = f(GC)log f(GC) + f(CG)log f(CG).  Repeat for all 
+.I k 
+less than
+.IR "l" "."   
+The total complexity of the 
+.IR "l" "-mer" 
+is H(l) = H(1) + H(2) + ... + H(l-1).
+Here we filter out all features with complexity less than 1.0:
+.PP
+.CODE ffpry -l 5 *.fna > vectors
+.CODE ffpcomplex -l 1.0 vectors > vectors.filt
+.PP
+Features with high and low complexities can 
+be removed simultaneously.  This example excludes all features which
+with complexity greater than 10 and less than 2.
+.PP
+.CODE ffpcomplex -u 10.0 -l 2.0
+.PP
+Finally we can assume that the complexities of the features used follow a specific
+distribution (usually the normal distribution is the appropriate choice).
+We can exclude features that lie outside a certain range of the cummulative
+probability distribution.  Here we exclude all features which lie below
+10% and above 95% of the normal CDF.
+.PP
+.CODE ffpcomplex -n -l 0.1 -u 0.95
+.PP
+.SH AUTHOR
+This program was written by Gregory E. Sims.
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpry(1),
+.BR ffpfilt(1)

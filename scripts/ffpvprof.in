@@ -1,0 +1,238 @@
+#!/usr/bin/env bash
+# This code is distributed under a Non-commerical use 
+# License.  See LICENSE for more details.  Use of this
+# code must be properly attributed to its author
+# Gregory E. Sims provided that its use or derivative 
+# use is non-commercial in nature.  Proper attribution        
+# can be made by citing:
+#
+# Sims GE, et al (2009) Alignment-free genome 
+# comparison with feature frequency profiles (FFP) and 
+# optimal resolutions. Proc. Natl. Acad. Sci. USA.
+# 106, 2677-82.
+#
+# Gregory E. Sims (C) 2010-2012
+#
+#####################################################
+
+# See man page ffpvprof(1) for full manual.
+# Also see ffpvocab(1) for further reference.
+
+#Set shell options
+shopt -s -o nounset # All variables must be declared
+
+#Read only variables
+declare -r AUTHOR='Gregory E. Sims'
+declare -r YEAR='2011'
+declare -r EMAIL='[@]EMAIL[@]'
+declare -r SCRIPT=${0##*/}
+declare -r VERSION='[@]VERSION[@]'
+declare -r PACKAGE='FFP PHYLOGENY'
+declare -r MAXWORD=${MAX_WORD_SIZE-40} # This should possibly be set by make
+declare -r MACOSX='[@]ISOSX[@]'
+
+#Is the terminal connected to stdin or a pipe
+tty -s
+declare -r ISTTY=$?
+
+TMP=/tmp
+TMPFILE=
+
+#Option flags and default values
+DFLAG=
+AFLAG=
+RFLAG=
+ZFLAG=
+MISMATCH=
+EXE_DIR=
+EXECUTABLE='ffpry'
+LONGOPTSDIS=
+declare -i START=1
+declare -i END=20
+declare -i THRESHOLD=2
+
+
+function die() {
+	echo "$*" >&2
+	clean_up 1
+}
+
+function fatal() {
+	die "$SCRIPT: $*"
+}
+
+
+function print_usage() {
+	cat <<-EOF
+	$SCRIPT - Constructs a word usage (vocabulary) profile
+	Usage: $SCRIPT [OPTIONS] ... [FILE] ...
+		$LONGOPTSDIS
+	    -d, --disable-class		Disable classing (use full alphabet)
+	    -a, --amino			Amino acid input, default DNA input 
+	    -r, --no-reverse		Disable reverse complement matching 
+	    -z N, --rand-mask=N		Random weight mask, N mismatches 
+	    -s N, --start=N		Specify START length range, default 3
+	    -e N, --end=N		Specify END length range, default 20
+	    -f N, --freq-thresh=N	Specify word frequency THRESHOLD [Def. 1]					
+	    -p STR, --path=STR		Path to executables, if not in path
+	    -T STR, --tmpdir=STR	Directory for temporary files
+	    -v, --version		Version Information			
+	    -h, --help			This Message			
+
+	$AUTHOR, (C) $YEAR
+	$EMAIL
+	EOF
+}
+
+function print_version() {
+	cat <<-EOF
+	$SCRIPT ($VERSION) $PACKAGE
+	$AUTHOR (c) $YEAR
+	$EMAIL
+	EOF
+}
+
+
+# Perform program exit housekeeping
+# Optionally accepts an exit status
+
+function clean_up() {
+	rm -fr $TMPFILE;
+	exit $1
+}
+
+# SETUP actions for early termination
+trap "clean_up 1" ABRT HUP INT QUIT PIPE
+
+OPTSTRING="ade:f:hs:T:vrz:p:"
+LOPTSTRING="amino, disable-class,end:,freq-thresh:,help,start:,tmpdir:,version,no-reverse,rand-mask:path"
+
+# Check which version of getopt is being used.
+# If enhanced return value is 4.
+getopt -T &> /dev/null
+COMPATIBLE=$?
+if [ "$COMPATIBLE" = "4" ] ; then
+	RESULT=$(getopt -s "bash" -n "$SCRIPT" -o "$OPTSTRING" -l "$LOPTSTRING" -- "$@")
+	STATUS=$?
+else
+	LONGOPTSDIS="LONG OPTIONS DISABLED"
+	warn "Long options disabled: Install enhanced 'getopt'"
+	RESULT=$(getopt $OPTSTRING $*)
+	STATUS=$?
+fi
+
+[ $STATUS -eq 0 ] || die "Try '$SCRIPT --help' for more information."
+
+#double substitute RESULT with eval
+#and place options in the script parameter list
+
+eval set -- "$RESULT"
+
+
+while [ true ] ; do
+	case "$1" in
+		-d|--disable-class) 
+			DFLAG="-d"
+		;;
+		-a|--amino)
+			AFLAG="-a"
+			EXECUTABLE="ffpaa"
+		;;
+		-r|--no-reverse)
+			RFLAG="-r"
+		;;
+		-z|--rand-mask)
+			shift
+			[[ "$1" =~ ^[0-9]+$ ]] \
+			|| fatal "-s $1: Integer expected"
+			ZFLAG="-z"
+			MISMATCH=$1
+		;;
+		-s|--start) 
+			shift
+			[[ "$1" =~ ^[0-9]+$ ]] \
+			|| fatal "-s $1: Integer expected"
+			START=$1
+		;;
+		-e|--end)
+			shift
+			[[ "$1" =~ ^[0-9]+$ ]] \
+			|| fatal "-e $1: Integer expected"
+			END=$1
+		;;
+		-f|--freq-thresh)
+			shift
+			[[ "$1" =~ ^[0-9]+$ ]] \
+			|| fatal "-f $1: Integer expected"
+		 	THRESHOLD=$1
+		;;		
+		-p|--path)
+			shift
+			EXE_DIR="$1"
+		;;	
+		-h|--help)
+			print_usage	
+			exit 0
+		;;
+		-v|--version)
+			print_version
+			exit 0
+		;;
+		-T|--tmpdir)
+			shift
+			TMP="$1"
+		;;	
+		--)
+			shift
+			break
+		;;
+	esac
+	shift
+done
+
+ARGV=$*
+export PATH=$EXE_DIR:$PATH
+# If stdin connected to tty
+# issue an error with zero arguments
+if [ $ISTTY = 0  -a  $# = 0  ] ; then
+	echo "$SCRIPT: Missing FILE argument(s)." >&2
+	die "Try '$SCRIPT --help' for more information."
+elif [ $# = 0 ] ; then
+	if [ ! -e $TMP ] ; then
+		mkdir -p -m a+rwt $TMP || fatal "Failed to create '$TMP' temp dir."
+	fi
+
+        if [ -n "$MACOSX" ] ; then
+		TMPFILE=$(mktemp -t $TMP)
+        else
+                TMPFILE=$(mktemp -p $TMP)
+        fi
+
+	ARGV=$TMPFILE
+	#  Create a tempfile from stdin
+	cat <&0  > $TMPFILE || fatal "Failed to create '$TMPFILE' tempfile." 
+fi
+
+if [ -n "$MISMATCH" ] ; then
+	[ "$MISMATCH" -lt "$START" ] || fatal "-z $MISMATCH must be less than -s $START."
+fi
+
+[  -n "$AFLAG"  -a  -n "$RFLAG"  ] && fatal "-r not applicable to protein sequence."
+[ $START -ge 1 ]	|| fatal "-s $START: must be >= 1."
+[ $END -ge $START ]	|| fatal "-e $END: must be >= -s $START." 
+[ $THRESHOLD -ge 1 ]	|| fatal "-f $THRESHOLD: must be > 0."
+[ $END -le $MAXWORD ]   || fatal "-e $END must be less than $MAXWORD."
+[ $START -le $MAXWORD ] || fatal "-s $START must be less than $MAXWORD."
+
+# Iterate through feature lengths
+
+
+for (( LEN=START; LEN<=END; LEN++ )) ; do
+	NUMFEATURES=$( $EXECUTABLE -l $LEN $DFLAG $RFLAG $ZFLAG $MISMATCH $ARGV | ffpvocab -f $THRESHOLD  )
+	echo $LEN $NUMFEATURES
+done
+
+clean_up 0
+
+
+

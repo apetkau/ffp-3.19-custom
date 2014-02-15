@@ -1,0 +1,176 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffptree 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffptree \- Build Neighbor Joining or UPGMA trees from distance matrix input.
+.SH SYNOPSIS
+.BI "ffpdf [" "OPTION" "] ... [" "FILE" "] ..."
+.SH DESCRIPTION
+.PP
+Calculate a Neighbor Joining tree or UPGMA tree.  This program is 
+compatible with phylip style distance matrix infiles and the output
+produced by 
+.B ffpjsd 
+with option 
+.B -p.
+The NEWICK style tree is written to standard out, while progress reports
+and a human readable tree are written to standard error.  
+Input matrices can be read from standard input, a pipe or a file. The
+input file can contain multiple sets of matrices.
+FASTA sequences will be read
+from standard input if no file arguments are supplied and 
+.B ffptree
+is called non-interactively (i.e. as part of a pipeline) or with a "-" in the
+argument list.    
+.SH OPTIONS
+.TP
+.B \-n, --upgma
+Build a UPGMA tree. The default is to build a neighbor joining tree.
+.TP
+.B \-l, --lower
+Use lower input triangle.  Use only the lower half of the input matrix
+and assume symmetry.
+.TP
+.B \-u, --upper
+Use upper input triangle.  Use only the upper half of the input matrix
+and assume symmetry.
+.TP
+.B \-t, --print-tree
+Disable printing of a human readable tree to standard error.
+.TP
+.B \-p, --progress
+Disable printing of tree build progress to standard error.
+.TP
+.B \-d, --print-data
+Enable printing of the input data before tree build standard error.
+.TP
+.B \-y, --symmetrize
+Symmetrize input data matrix, by averaging upper and lower triangles.
+By default, the input matrix is checked for symmetry, but is disabled
+with 
+.B \-y.
+.TP
+.B \-q, --quiet
+Disable printing of human readable tree, tree build progress and warnings to
+standard error.
+.TP
+.BI "\-o " "TAXAN" ",  --outgroup=" "TAXAN"
+Rearrange tree to place taxon
+.I TAXAN
+at the outgroup position of the tree.
+.I TAXAN
+is an integer ranging from 1 to the number of
+input taxa.
+.TP
+.BI "\-O " "OUT" ",  --out=" "OUT"
+Write Newick format tree to file 
+.I OUT.
+By default, the tree is printed to
+standard out.
+.TP
+.BI "\-P " "OUT" ",  --out-prg=" "OUT"
+Redirect tree build progress to a file
+.I OUT.
+By default, progress is printed to
+standard error.
+.TP
+.BI "\-w " "WDTH" ",  --precision=" "WDTH"
+Specify the decimal precision used in reporting
+branch lengths in the Newick format tree. The
+default precision is 8 digits.
+.TP
+.BI "\-j[" "S" "],  --jumble[=" "S" "]"
+Jumble input order or species in matrix.
+Optional argument
+.I S 
+can be used to provide a fixed random seed
+value to the random number generator, but the
+default value is the (system time) * (process ID).
+.TP
+.BI "\-m[" "N" "],  --multiple[=" "N" "]"
+Limit tree building to the first
+.I N
+sets.
+Without option 
+.I N 
+use all input sets, which
+is the default behavior.  With
+option 
+.IR "N" ","
+use up to 1 to the 
+.IR "N" "th set."
+The default is to use all input sets from
+the input file without using option 
+.B \-m.
+.TP
+.B  "\-v, --version"
+Display version information.
+.TP
+.B  "\-h, --help"
+Display help message.
+.PP
+.SH EXAMPLES
+.PP
+This utility can be placed at the end of a pipeline of FFP utilities
+to directly generate tree output.  The example below supressed printing 
+of the build progress and the human-readable to standard error with the
+.B \-q option.
+.PP
+.CODE ffpry -l 4 *.fasta | ffpcol | ffprwn | 
+.CODE ffpjsd -p species.txt | ffptree -q > treefile
+.PP
+Note, you must have defined a taxa name file
+with option
+.B \-p
+in the call to
+.B ffpjsd
+to pipe input to
+.B ffptree.  
+For additonal information see,
+.BR ffpjsd(1).  
+If you wish to view and save the build progress for later review, then
+redirect standard error to a file.
+.PP
+.CODE ffpry -l 4 *.fasta | ffpcol | ffprwn | 
+.CODE ffpjsd -p species.txt | ffptree > treefile 2> progress
+.PP
+Multiple input sets can be created and supplied in the same
+input file. Typically these will be pseudo-replicates generated
+via the 
+.B ffpboot
+utility.  If the file
+.CW input
+contains 100 pseudo-replicates or input sets then by default
+.B ffptree
+will read all the input sets and generate trees for each. 
+The 
+.B \-m 
+option can be used to control how many input sets are processed.
+.PP
+.CODE   ffptree < input      # Generate all 100 trees
+.CODE   ffptree -m < input   # Generate all 100 trees
+.CODE   ffptree -m50 < input # Generate first 50 trees.
+.PP
+Note the absence of an intervening space between 
+.b \-m
+and 
+50.  This is the format for all options which take an
+optional argument.
+.PP
+.SH AUTHOR
+This program was written by Gregory E. Sims
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpaa(1),
+.BR ffpry(1),

@@ -1,0 +1,113 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffpre 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffpre \- This program calculates the relative entropy between an
+.IR "l" "\-2" 
+Markov model estimation of frequency and the observed frequency
+of features.  This is used to calculate an upper limit of 
+.I l 
+to use for phylogenetic inference.
+
+.SH SYNOPSIS
+.BI "ffpre [" "OPTION" "] ... [" "FILE" "] ..."
+.SH DESCRIPTION
+.PP
+Given no options the default behavior of 
+.B ffpre 
+the progam is to generate the relative entropy value (RE)  (also known as the Kullbach-Leibler divergence)
+of feature frequencies using 
+.IR "l" "=10" 
+and estimates of the frequencies using 
+.IR "l" "=9" 
+and 
+.IR "l" "=8" 
+to provide the estimate.  To calculate the 
+relative entropies for a range of 
+.IR "l" "," 
+use the shell script supplied
+.B ffpreprof
+with the FFP package, which calculates a relative entopry profile.
+This utility is used to help determine
+the proper feature length range to use for phylogenetic inference.
+When the relative entropy approaches zero, this indicates that the
+frequency of all features can be determined by using the frequencies
+of the 
+.IR "l-" "1" 
+and 
+.IR "l-" "2" 
+feature frequencies (i.e. features have the
+same frequency as slightly shorter words).  This indicates that each 
+.IR "l" "," 
+.IR "l-" "1," 
+and 
+.IR "l-" "2" 
+feature occurs in the same context within the
+sequence.  Therefore using lengths longer than when the RE is zero
+provide no additional information. The default assumes nucleic acid
+sequence input.  
+.SH OPTIONS
+.TP
+.BI "\-l " "LEN" ", --length=" "LEN"
+.RI "Changes the default length of features to " "LEN" ". The
+default length is 10.
+Maximum length allowed in 40.
+.TP
+.B \-d, --disable-ry
+Disable RY coding to use ATGC coding.
+.TP
+.B \-r, --no-reverse
+Disable reverse complement matching. Applicable to 
+nucleotide sequence only.
+.TP
+.B \-a, --amino 
+Input is amino acid sequence.
+.TP
+.B \-t, --text
+Input is a text file. 
+.TP
+.B \-v, --version
+Print program version.
+.TP
+.B \-h, --help
+Help message.
+.PP
+.SH EXAMPLES
+To calculate the relative entropy between the estimate
+and observed feature frequencies:
+.PP
+.CODE ffpre -l 4 test*.fna
+.PP
+To calculate the RE for a range of lengths use
+.BR "ffpreprof" "."
+Note that the RE may oscillate above or below zero - but
+given long enough
+.I l
+it will eventually approach zero.  In mathematical terms
+the limit of 
+.IR "KL" "(" "l" ")"
+as
+.I l
+approaches infinity is zero.
+.PP
+.SH FUTURE DIRECTIONS
+None.
+.PP
+.SH AUTHOR
+This program was written by Gregory E. Sims
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpvprof(1),
+.BR ffpvocab(1),
+.BR ffpreprof(1)

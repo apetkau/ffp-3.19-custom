@@ -1,0 +1,244 @@
+#!/usr/bin/env perl
+# This code is distributed under a Non-commerical use 
+# License.  See LICENSE for more details.  Use of this
+# code must be properly attributed to its author
+# Gregory E. Sims provided that its use or derivative 
+# use is non-commercial in nature.  Proper attribution        
+# can be made by citing:
+#
+# Sims GE, et al (2009) Alignment-free genome 
+# comparison with feature frequency profiles (FFP) and 
+# optimal resolutions. Proc. Natl. Acad. Sci. USA.
+# 106, 2677-82.
+#
+# Gregory E. Sims (C) 2010-2012
+#
+#####################################################
+use strict;
+use Getopt::Long;
+use Pod::Usage;
+use constant VERSION=> '[@]VERSION[@]';
+use constant EMAIL=> '[@]EMAIL[@]';
+use constant AUTHORS=> "Gregory E. Sims";
+use constant PACKAGE=> "FFP";
+use constant YEAR=> "2011";
+
+
+
+my $SCRIPT = $0;  # Script name
+$SCRIPT =~ s/.*\///;
+
+my $GROUP_FILE="";
+my %GROUPS;
+my $GROUP="";
+my %GROUPSIZE;
+my $PFLAG=1.0;
+
+my $result=GetOptions("f|group-file=s"	=> \$GROUP_FILE,
+		   "g|group=s"		=> \$GROUP,
+		   "p|percent=f"	=> \$PFLAG,
+		   "v|version"		=> sub { print_version(); exit(0); },
+	    	   "h|help" 		=> sub { print_usage(); exit(0); } );
+
+
+if ($GROUP_FILE) {
+	parse_group_file($GROUP_FILE);
+}
+
+
+# Group sanity check.
+if ($GROUP) {
+	if (!$GROUP_FILE) {
+		print STDERR "$SCRIPT: --group-file required.\n";
+		exit(1);
+	}
+
+	if (!$GROUPSIZE{$GROUP}) {
+		print STDERR "$SCRIPT: --group $GROUP, is not a valid group.\n";
+		exit(1);
+	}
+}
+
+
+if ( !isatty() && !@ARGV ) {
+	print STDERR "$SCRIPT: FFP file argument required\n";
+	print STDERR "Try \`$SCRIPT --help\' for more information.";
+	exit(1);
+} 
+
+my $fh;
+if (@ARGV) {
+	while (my $file=shift @ARGV) {
+		open($fh,$file);
+		get_dfs($fh);
+		close($fh);
+	}
+} else {
+	get_dfs(\*STDIN);
+}
+
+
+# Set up groups/clades
+# Stores results in global variables GROUP and GROUPSIZE
+sub parse_group_file() {
+	my ($file)=@_;
+	open(FILE,"$file") || die "$SCRIPT: Couldn't open $file.\n";
+	my $i=0;
+	my $line;
+	while ($line=<FILE>) {
+		chomp $line;
+		if ($line !~ /^\#/ ) {
+			$line =~ s/[\s]//g;
+			$GROUPS{$i}=$line;
+			$GROUPSIZE{$line}++;
+			$i++;
+		}
+	}
+	close(FILE);
+
+}
+
+
+
+#@todo default behavior, unless a clade file is specified, is to assume
+# that all rows of the FPP matrix are in the same clade.
+# If --clade-file is given then this is a file with the following format
+# # Three clades A,B and C.  The 1st and 2nd row of the FFP belong to
+# clade A, 3rd row clade C and the remaining rows clade B.  Any symbols
+# can be used for the clade names, (however whitespace is stripped from the
+# name).
+# A
+# A
+# C
+# B 
+# B 
+
+#@todo Ignore all groups with less than one member.
+
+# Test whether input is either key-value pairs 
+# ie.  ATGC 3  TGAT 2   GTGA 1   ...
+# or Columnar
+#      3  2  1
+
+sub isKeyValued {
+	my ($fh)=@_;
+	my $line=<$fh>;
+	seek($fh,0,0);
+	if ($line =~ /^[^0-9]/ ) {
+		return 1;
+	}
+	return 0;
+}
+
+
+#@todo test whether key valued or columnar input
+# Assuming columnar below
+# Given the default only, we search for the df's in
+# the first alpha numeric group only.
+# If an option is specifed, then we search for 
+# all groups specified/ this takes more time however.
+# and requires creation of a tempfile if input is from
+# stdin.
+
+sub get_dfs {
+	my ($fh)=@_;
+	my $i=0;
+	my $j;
+	my @a;
+	my %df;
+
+	if (isKeyValued($fh)) {
+		while(@a=split(" ",<$fh>)) {
+			if ( $GROUP_FILE eq "" || $GROUP eq "" ||  $GROUPS{$i} eq $GROUP) {
+				foreach ($j=0; $j <@a; $j+=2) {
+					$df{$a[$j]}++;
+				}
+			} else {
+				foreach ($j=0; $j <@a; $j+=2) {
+					$df{$a[$j]}--;
+				}
+			}
+		$i++;			
+		}
+	} else {
+		print STDERR "$SCRIPT: Columnar input not supported, Use Key-value input\n";	
+		exit(1);
+	}
+
+	close($fh);
+
+	if (!$GROUP_FILE) {
+		foreach my $key (keys %df) {
+			if ( $df{$key} < $i*$PFLAG ) {
+				delete $df{$key};
+			}
+		}
+	} else {
+		foreach my $key (keys %df) {
+			if ( $df{$key} < $GROUPSIZE{$GROUP}*$PFLAG ) {
+				delete $df{$key};
+			}
+		}
+	}	
+
+	print join("\t",keys %df),"\n";
+	exit(0);
+}
+
+
+# Test if script is being redirected stdin
+# via a pipe or < redirection.
+
+sub isatty() {
+	return system("tty -s");
+}
+
+sub print_version() { 
+	print "$SCRIPT (",VERSION,")\n";
+	print PACKAGE, " package\n";
+	print AUTHORS, " (C) ", YEAR,"\n";
+	print "Contact ",EMAIL,"\n";
+}
+
+
+
+
+
+sub print_usage() {
+my $EMAIL=EMAIL; 
+print  <<"EOF";
+Usage: ffpdf [OPTIONS] ... [FILE] ...
+ffpdf - Outputs clade distinguishing features for specified clades.
+
+OPTIONS
+	-f STR, --group-file=STR Indicates which row of the ffp file
+				 Input belongs to which clade.  The
+				 STR file has the format of one new
+				 line delimited symbol per row.  See
+				 ffpdf(1) for more information. Def
+				 assumes all rows are the same clade
+
+	-g STR, --group=STR	 Which clade to report DFs for. Default
+				 behavior assumes all rows are one clade.
+
+	-p FLT, --percent=FLT	 Specify a fractional cutoff for the 
+				 percentage ( i.e. 50%  = 0.5) of of
+				 a group which need to have a feature.
+				 Default is 1.0.
+
+	-v, --version		 Display version information.
+
+	-h, --help		 Brief help message.
+
+DESCRIPTION
+
+This utility performs the analysis described in Sims and Kim (2011),
+PNAS, 108. It finds features in the ffp which are present ONLY in a 
+specified clade and no other clades. Given no file arguments, the FFP 
+input can be piped into STDIN.  If a group file is specified but no 
+group is specified then, the group file is ignored.  You must query 
+individual groups separately.
+
+Contact $EMAIL
+EOF
+}

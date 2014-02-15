@@ -1,0 +1,139 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffpdf 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffpdf \- Outputs clade distinguishing features for specified clades.
+.SH SYNOPSIS
+.BI "ffpdf [" "OPTION" "] ... [" "FILE" "] ..."
+.SH DESCRIPTION
+.PP
+This is used to discover distinguishing (or diagnostic) features (DFs)
+that are present in a specific clade and no other clades.  This
+technique was used in the paper: Sims GE, and Kim SH (2010), PNAS, 108,
+8329-34. This ultility should be used as a filter for the output of
+.BR "ffpry" "," 
+.BR "ffpaa" ","
+or
+.B ffptxt
+using key-valued FFPs input.  Given no file arguments, the FFP input can
+be piped into STDIN.  If a group (i.e. clade) file is specified but no group is
+specified then, the group file is ignored.  You must query individual
+groups separately.  Output is a tab delimited list of the features.
+.SH OPTIONS
+.TP
+.BI "\-f " "FILE" ",  --group-file=" "FILE"
+Specify clades/groups.
+FILE is a newline delimited file which indicates which row of the FFP file 
+belongs to which clade.  FILE has a format specifying one newline delimited symbol per
+row.  See 
+.B EXAMPLES 
+below.  If not specified then all rows are assumed to be
+in the same clade.  Use in conjunction with option
+.BR "\-g" "." 
+.TP
+.BI "\-g " "STR" ", --group=" "STR"
+Select the clade where the DF search will be performed.  If not specifed all rows of
+the FFP are assumed part of one clade.
+.TP
+.BI "\-p " "FLT" ", --percent=" "FLT"
+Specify a fractional cutoff for the percentage ( i.e. 50%  = 0.5) of
+a group members which which need to have a feature for it to be considered a DF. The
+default is all group members or 1.0.
+.TP
+.B  "\-v, --version"
+Display version information.
+.TP
+.B  "\-h, --help"
+Display help message.
+.PP
+.SH EXAMPLES
+A distinguishing feature is a feature which is present in all FFPs of a 
+given group, but absent in all other groups.  Given these example rows from
+an FFP matrix,
+.PP
+.CODE Taxon 1 ...   ATG 3  CAC 2  TGA  3 ...
+.CODE Taxon 2 ...   ATG 2  CAC 1  TTG  1 ...
+.CODE Taxon 3 ...   ATG 4  TGC 3  GGA  2 ...
+.PP
+and the additional information that taxa 1 and 2 belong to group A and
+taxon 3 belongs to group B, we can give an example of a DF.
+The feature,
+.CW ATG
+,is not a DF for either group A or B, since it is
+present in all groups.  However feature 
+.CW CAC
+is a DF for group A, since it is present in only group A and not group B.  Likewise feature 
+.CW TGA
+and
+.CW TTG 
+are not DFs of group A because neither is present in all
+members of that group.  
+.PP
+To find distinguishing features in an FFP, first you must create an FFP,
+using one of the feature counting utilities, 
+.BR "ffpry" ","
+.BR "ffpaa" ","
+or 
+.BR "ffptxt" "."
+The example below illustrates the method for RY-coded nucleotide sequences,
+where we want to find features which are universally shared among all taxa
+specified in the FFP input file.
+.PP
+.CODE ffpry -l 6 test*.fna > vector
+.CODE ffpdf vector > dfs
+.PP
+or alternatively, combining the separate commands as one pipeline:
+.PP
+.CODE ffpry -l 6 test*.fna | ffpdf > dfs
+.PP
+The above example assumes every row (genome, species, or sequences) is
+a member of the same group (clade).  For multiple clades, use the 
+.B --group-file 
+option to specify the clade structure.  This is defined
+by building a newline delimited group-file definition.
+Lets say there are 5 genomes and there are two
+clades, the 2nd and 3rd rows of the FFP, belong to clade A and the
+remainder belong to clade B., then the group file should have the
+format below
+.PP
+.CODE $ cat groupfile
+.CODE B
+.CODE A
+.CODE A
+.CODE B
+.CODE B
+.PP
+Now that clades have been defined we can extract out the DFs for
+clade A or B separately (A in this case below).
+.PP
+.CODE ffpry -l 6 test*.fna | ffpdf --group-file="groups.txt" --group="A" > dfs.A
+.PP
+Multi-character alphanumeric symbols can also be specified for group names.
+Note however, any whitespace will be stripped from group names.
+.PP
+Also, note that by default a DF is defined as a feature which is present in
+all members of a group.  This defintion can be relaxed slightly by using the
+.B \-p 
+option to specify the percentage of taxa within a given group which must have a feature
+in order for it to be considered a DF.  For example if we wanted to find out which 
+features are present in 2 out of 3 taxa in group B we can use this syntax:
+.PP
+.CODE ffpry -l 6 test*.fna  | ffpdf -p 0.66 --group-file="groups.txt" --group="A" > dfs.B
+.PP
+.SH AUTHOR
+This program was written by Gregory E. Sims.
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpaa(1),
+.BR ffpry(1)

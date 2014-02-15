@@ -1,0 +1,168 @@
+.de CW
+. nop \f[C]\\$*\f[]
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffpaa 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffpaa \- This program generates an FFP vector of amino acid features.
+.SH SYNOPSIS
+.BI "ffpaa [" "OPTION" "] ... [" "FILE"  "] ..."
+.SH DESCRIPTION
+.PP
+Given no options the default behavior of the program is to
+generate a Feature Frequency Profile (FFP) using features of length
+4.  By default amino acids are divided and counted using 11 equivalent
+classes: (ST),(DE),(KQR),(IVLM),(FWY),C,G,A,N,H,P [Li et al. (2003) Peds, 16. 323].
+For multicharacter classes the amino acid is reported in the ffp output by the first character 
+in the series.  For example, (IVLM) is represented by I.
+.SH OPTIONS
+.TP
+.BI "\-l " "LEN" ", --length=" "LEN"
+.RI "Changes the default length of features to " "LEN" ". The default length is 4,"
+with a maximum length allowed of 40.
+You may overide this maximum length by setting (and exporting)
+the environmental variable MAX_WORD_SIZE to a different value.
+.TP
+.BI "\-f " "FILE" ", --feature-list=" "FILE"
+Changes the behavior of the program to read
+.RI "a list of features from " "FILE" ". Features can"
+be space or newline delimited.
+.TP
+.BI "\-w " "STR" ", --mask=" "STR"
+.RI "Use character " "STR" " of length " "LEN" " which specifies"
+a character mask for the features. For example "1111101111" means to ignore the 6th character of a feature.
+.TP
+.BI "\-z " "INT" ", --rand-mask=" "INT"
+Create a random character mask which allows up to
+.IR "INT" " mismatches.  No greater than " "LEN"
+in mismatches is allowed. The character mask is
+printed to standard error at the beginning of
+execution.
+.TP
+.BI "\-s " "INT" ", --rand-seed=" "INT" 	
+Seed the random number generator. Randomization 
+.RB "operations like " "-z" " are fixed and  predictable across different runs."
+By default the seed is (system time) * (process ID).
+.TP
+.BI "\-q, --quiet"
+Run in quiet mode.  Suppresses printing to standard error.  This effects option
+.BR "\-z" "."
+.TP
+.BI "\-d, --disable-classes"
+Disable classing of amino acids. Use 20 symbol amino acid coding.
+.TP
+.B "\-m, --multiple"
+.IR "FILE " "contains multiple FASTA sequences and an FFP is desired for each sequence."
+.TP
+.B "\-h, --help"
+Display help message.
+.TP
+.B "\-v, --version"
+Display version.
+.PP
+.SH EXAMPLES
+The command:
+.PP
+ffpaa -l 3 file*.faa
+.PP
+Will produce a output of this form, using features of length 3:
+.PP
+.CODE AGK 2 ASS 3 AKF 4 ...
+.br
+.CODE AKK 3 AKS 2 AKF 5 ...
+.PP
+There will be one FFP line for each 
+.CW .faa 
+file supplied in the argument list and each will be printed in the order
+specified on the command line.  Note, the above uses the order in which the
+shell (i.e. bash, cshell, etc.) expands the file argument wildcard, 
+.C *.faa.
+In the even this is undesired, the format format below can also be used
+to explicitly control the ordering:
+.PP
+.CODE ffpaa -l 4 file1.faa file2.faa file3.faa
+.PP
+A mask can be applied to feature counting to allow mismatches using the 
+.B \-w 
+command.  For example if a mismatch is to be allowed
+at the second and fourth positions of a feature with length 
+.IR "l" "=6, " "this can be done via:"
+.PP
+.CODE ffpaa -l 6 -w "101011" file*.fna
+.PP
+If mismatches are desired but no specific pattern is necessary
+then one can use the
+.B -z
+option.
+.PP
+.CODE ffpaa -z 2 file1.faa file2.faa.  
+.PP
+This will produce a random mask of at least two mismatches (within a feature with
+a default length of 4).  The mask
+is printed to standard error. To save the mask for
+later reference, you can direct standard error to a file.
+For example:
+.PP
+.CODE ffpaa -z 3  file*.fna > vector 2> mask
+.PP
+The redirection
+.CW >2
+sends standard error to the file 
+.CW mask.
+.PP
+.PP
+To disable classing of amino acids, (i.e. make FFP consider
+.RB "R and K different -- and therefore count each symbol separately) use the " "-d" " option"
+.PP
+.PP
+The utilities in the FFP package can be used as fully
+qualified filters and can be used to build pipelines.
+The pipeline below will create a Phylip infile format distance
+matrix, using the Jensen Shannon divergence:
+.PP
+.CODE ffpaa -l 7 file*.fna | ffpcol -a | ffprwn | ffpjsd -p taxa.txt > infile
+.PP
+Note, the desired taxa names must be specified in the argument to 
+.BR "\-p" ","
+see
+.BR ffpjsd(1)
+.
+.PP
+To disable classing of animo acids you should incorporate the 
+.B \-d 
+option into the above pipeline -- both in the call to 
+.B ffpaa 
+and 
+.B ffpcol.
+.PP
+.CODE ffpaa -l 7 -d file*.fna | ffpcol -a -d | ffprwn ...
+.PP
+Bootstrap and jacknife resampling can be done with the
+ffpboot program, see 
+.BR ffpboot(1).
+.PP
+.SH FURTHER DIRECTIONS
+Command line definable character classes.
+.PP
+.SH AUTHOR
+This program was written by Gregory E. Sims.
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpry(1),
+.BR ffprwn(1), 
+.BR ffpjsd(1),
+.BR ffpcol(1),
+.BR ffpmerge(1),
+.BR ffpboot(1),
+.BR ffpvprof(1),
+.BR ffpreprof(1),
+.BR ffptree(1)

@@ -1,0 +1,93 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffpvprof 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffpvprof \- Constructs a word usage (vocabulary) profile.
+.SH SYNOPSIS
+.BI "ffpvprof [" "OPTION" "] ... [" "FILE" "] ..."
+.SH DESCRIPTION
+.PP
+.RB "This shell script is a wrapper for the utility " "ffpvocab" "."
+Using it you can calculate the word usage over
+a range of feature lengths.  Results are displayed
+in columnar format, where the length is the first
+column and the word usage is the second column.
+.SH OPTIONS
+.TP
+.B \-a, --amino
+Specify amino acid input.  Default
+is nucleic acid (ATGC) input.
+.TP
+.B \-d, --disable-class
+Use ATGC coding. default is RY Coding.
+For Amino acid input this disables amino
+acid classes.
+.TP
+.B \-r, --no-reverse
+Disable reverse complement matching of nucleotide FASTA input.
+Does not apply for protein input.
+.TP
+.BI "\-z " "INT" ", --rand-mask=" "INT"
+Specify a random mask string. INT is the number
+of mismatches.  The number of mismatches must be less
+than the default start value or less than the argument
+supplied to -s.
+.TP
+.BI "\-s " "INT" ", --start=" "INT"
+Specify start length range, default 1.
+.TP
+.BI "\-e " "INT" ", --end=" "INT"
+Specify end length range, default 20. The maximum word size
+is 40.
+You may overide this maximum length by setting (and exporting)
+the environmental variable MAX_WORD_SIZE to a different value.
+.TP
+.BI  "\-f " "INT" ", --freq-thresh=" "INT"
+Specify word frequency threshold to count. Count words which occur only
+INT or more times.  Default is 2.
+.TP
+.BI "\-T " "DIR" ", --tmpdir=" "DIR"
+Specify location for temporary files.
+Only applies for reading FASTA input from standard in.
+.TP
+.BI "\-p " "DIR" ", --path=" "DIR"
+Path to ffpry,ffpaa,ffpvocab executables, if not in
+path.
+.TP
+.B \-v, --version
+Print version information.
+.TP
+.B \-h, --help
+Print brief help message.
+.PP
+.SH EXAMPLES
+To calculate a word usage profile using a frequency
+threshold of 3 for lengths between 4 and 12:
+.PP
+.CODE ffpvprof -s 4 -e 12 -f 3 vector
+.PP
+Using piping syntax, or as part of a pipeline of
+commands.  The example below pipes input from standard in.
+.PP
+.CODE ffpvprof -s 4 -e 12 -f 3 < vector
+.PP
+.SH FURTHER DIRECTIONS
+None.
+.SH AUTHOR
+This program was written by Gregory E. Sims.
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpvocab(1),
+.BR ffpre(1),
+.BR ffpreprof(1)

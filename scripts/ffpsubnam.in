@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# This code is distributed under a Non-commerical use 
+# License.  See LICENSE for more details.  Use of this
+# code must be properly attributed to its author
+# Gregory E. Sims provided that its use or derivative 
+# use is non-commercial in nature.  Proper attribution        
+# can be made by citing:
+#
+# Sims GE, et al (2009) Alignment-free genome 
+# comparison with feature frequency profiles (FFP) and 
+# optimal resolutions. Proc. Natl. Acad. Sci. USA.
+# 106, 2677-82.
+#
+# Gregory E. Sims (C) 2010-2012
+#
+#####################################################
+
+
+
+#Set shell options
+shopt -s -o nounset # All variables must be declared
+
+#Read only variables
+declare -r SCRIPT=${0##*/}
+declare -r VERSION='[@]VERSION[@]'
+declare -r PACKAGE='FFP PHYLOGENY'
+declare -r AUTHOR='Gregory E. Sims'
+declare -r YEAR='2011'
+declare -r EMAIL='[@]EMAIL[@]'
+
+#Is the terminal connected to stdin?
+tty -s
+declare -r ISTTY=$?
+
+TMP=/tmp
+TMPDIR=
+TMPFILE=
+
+function print_usage() {
+	cat  <<-EOF 
+		$SCRIPT - Replaces taxa names in phylip 'infile'
+		Usage: $SCRIPT [OPTIONS] [NAMES] [INFILE]
+
+		    -o, --outfile       Specify output file, def STDOUT
+		    -v, --version	Version Information
+		    -h, --help		This help message
+
+		$AUTHOR, $YEAR
+		$EMAIL
+	EOF
+}
+
+
+function print_version() {
+	cat <<-EOF
+	$SCRIPT ($VERSION) $PACKAGE
+	$AUTHOR (c) $YEAR
+	$EMAIL
+	EOF
+}
+
+# Perform program exit housekeeping
+# Optionally accepts an exit status
+
+function clean_up() {
+	rm -rf $TMPDIR
+	exit $1
+}
+
+
+function die() {
+	echo "$*" >&2
+	clean_up 1
+}
+
+
+# SETUP actions for early termination
+trap "clean_up 1" ABRT HUP INT QUIT
+
+
+
+STDOUT=/dev/stdout
+
+OPTSTRING="o:hv"
+LOPTSTRING="out:,help,version"
+RESULT=
+
+# Check which version of getopt is being used.
+# If enhanced return value is 4.
+getopt -T &> /dev/null
+COMPATIBLE=$?
+if [ "$COMPATIBLE" = "4" ] ; then
+	RESULT=$(getopt -s "bash" -n "$SCRIPT" -o "$OPTSTRING" -l "$LOPTSTRING" -- "$@")
+	STATUS=$?
+else
+	LONGOPTSDIS="LONG OPTIONS DISABLED"
+	warn "Long options disabled: Install enhanced 'getopt'"
+	RESULT=$(getopt $OPTSTRING $*)
+	STATUS=$?
+fi
+
+[ $STATUS -eq 0 ] || die "Try '$SCRIPT --help' for more information."
+
+eval set -- "$RESULT"
+
+while [ true ] ; do
+	case "$1" in
+		-o|--out)
+	       		shift
+			[ -w "$1" ] || die "$SCRIPT: $1: Write permission denied" 
+			STDOUT="$1"
+		;;
+		-v|--version)
+			print_version
+			exit 0
+		;;
+		-h|--help)
+			print_usage   	
+			exit 0
+		;;
+		--)
+	        shift	
+		break
+		;;
+	esac
+	shift	
+
+done
+
+
+# If stdin connected to tty
+# issue an error if not exactly 2 argumentus
+# If infile piped in then expect a NAMES file argument
+if [ $ISTTY = 0 -a $# != 2 ] ; then
+	echo "$SCRIPT: Expected 2 arguments" >&2
+	die "Try '$SCRIPT --help' for more information."
+elif [ $ISTTY = 1 -a $# != 1 ]; then
+	echo "$SCRIPT: Expected NAME argument" >&2
+	die "Try '$SCRIPT --help' for more information."
+elif [ $ISTTY = 1 -a $# = 1 ] ; then
+	$TAXA=$1
+	$INFILE=/dev/stdin
+else
+	$TAXA=$1
+	$INFILE=$2
+fi
+
+
+[ -e $TAXA ] || die "$SCRIPT: $TAXA: No such file" 
+[ -e $INFILE ] || die "$SCRIPT: $INFILE: No such file" 
+
+NTAXA=$(wc -l < $TAXA)
+if [ "$NTAXA" !=  $(tail -n +2 $INFILE | wc -l)  ] ; then
+	die "$SCRIPT: Number of taxa in $TAXA and $INFILE not equal."
+fi
+
+
+# substitute the first 10 single byte columns for
+# input from file 1.
+
+cat <(head -n 1 $INFILE) > $STDOUT
+paste -d "" <(sed 's/ /_/g;s/\t/_/g' $TAXA|awk '{printf("%-10.10s\n",$1);}') \
+	<(tail -n +2 $INFILE | cut -c11- )  >> $STDOUT
+
+
+clean_up 0
+

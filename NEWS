@@ -1,0 +1,279 @@
+Version 3.19
+	Thanks to Joemar Taggana, some incompatible utilities 
+	were discovered in Mac OSX -- including incompatible
+	getopt and mktemp.  Corrected confusion in tutorial 
+        p. 3 regarding -m (Thanks to Erin Shellman).  Corrected
+	spelling of ffpjsd option --hamann to --hamman.
+
+Version 3.18
+	Rearranged ungetc character tests to come after
+	conversion of pipe to file.  Fixed memory leak in
+	hash init().  Added support for large files (> 2GB) on 32
+        bit machines.
+
+Version 3.17
+	Fixed bug in tempfile creation in function 
+        convertPipeToFile().
+
+Version 3.16
+	Fixed bug in ffpry with multiple headers parsed as a
+	single genome entry.
+
+Version 3.15
+	Fixed bug in ffprwn.
+
+Version 3.14
+	Added --disable-gui options to ./configure script. This
+	disables the perl based gui, so that the Perl/Tk module
+	isn't required for installation.
+
+Version 3.13
+	Changed row terminal output for all programs from '\t\n' 
+	(tab newline) to '\n' (newline) only.  This makes output
+	from previous version incompatible with 3.13 but the
+	ffps can be easily converted using:
+
+	sed 's/\t$//' ffp > ffp.tmp ; mv ffp.tmp ffp
+
+Version 3.12
+	Small bug fix for ffprwn for GNU compiler on 64 bit machines
+	where promotion of unsigned int to long unsigned int is
+	different.  Thanks to Adrienne Breland at the University
+	of Nevada, Reno for finding this.
+
+Version 3.10
+	Fixed minor bug in ffpry for fasta records pseudomolecule 
+	input ENDING in NNNNNNNN, or other invalid characters.
+
+Version 3.09
+	Fixed bug in ffpdf, related to initialized GROUP variable.
+	
+	Updated license
+
+Version 3.08
+
+	ffpgui
+
+	Added instructions to install a functional version of the
+	perl/tk module for using cygwin, in INSTALL.
+
+	Added error messages in ffpgui for running a vocab or 
+	relative entropy profile without loading a file first.
+
+	Added additional sections to tutorial.pdf
+       
+
+
+Version 3.07
+	Added signal handling to all executables.  
+	Broken pipes will cause a termination error in a pipeline
+	and will output 'PROGRAM: Broken pipe'
+
+	Expanded ./doc/tutorial.in.
+	Updated license.
+	Fixed inappropriate default -f setting (changed from 1 to
+	2) for ffpvprof.
+
+Version 3.06
+	Added ffptree utility, which creates neighbor joining and
+	upgma trees.  Date and version automatically updated 
+	during build process.
+	
+        Improved seeding of random generator when no seed is
+	provide via command line option:  ffpry, ffpboot, ffpaa
+
+	Added processing via ffptree to ffpgui.  The human 
+	readable tree is displayed in the message window.
+
+	Started tutorial file in ./doc directory. 
+
+	Added tutorial.pdf to doc directory
+
+Version 3.05
+	Added length test since MAX_WORD_SIZE is 40: ffpry, ffpaa
+	ffpre.
+
+Version 3.04
+	Added script ffpgui which is a Perl/Tk based GUI wrapper of
+	the various utilities.
+
+	Added --keys flag to ffpfilt to force keys to be output
+	instead of values only.
+
+Version 3.03
+	Fixed overflow error with non-rabin karp hash used in ffpcol.
+
+Version 3.02
+	The ffpaat utility has been removed from this package.  The
+	purpose of this utility was to count amino acid features in 
+	all nine frames from DNA fasta input.  However	obtaining
+	a proper translation of gene regions and using ffpaa is 
+	generally more informative.  This utility can still be 
+	compiled and used from previous versions, but will not longer
+	be part of future releases. 
+
+	Updated ffpre to Rabin-Karp hash, also fixed float overflow
+	errors and cases of nan, or inf in output.  Text mode is now
+	implemented in ffpre.
+
+	Updated ffptxt to Rabin-Karp hash.
+
+
+Version 3.01
+	Implementation of Rabin-Karp hash in ffpaa utility.
+	Similar speed gains as in ffpry obtained
+
+
+	ffpaa -l 20 NC_008253.faa      
+
+	ffpaa (v.3.0)                        ----------- 9.35 s 
+	ffpaa (v.3.01)                       ----------- 0.15 s
+
+	Input buffering options removed from both ffpaa and ffpry. The
+	optimal buffering size for the system is determined automatically
+	by using the stat.st_block size attribute of fstat or the compiler
+	default, whichever is greater.  This is an effort to use the
+	filesystem's most efficient block size.  
+	
+	Upcoming v3.02 will include Rabin-Karp implementation of ffpre.
+
+Version 3.0
+	Thanks to Nick Loman of University of Birmingham for pointing out
+	the cryptic nature of the "key-value" error messages when both
+	ffpfilt and ffpcol are used together in a pipeline successively.
+	
+	All error messages from the utilities state the program issuing
+	the error.
+
+	Revamped tmpfile creation for non-seekable piped input, to use
+	most efficient buffering.
+
+	Added extra unit tests to confirm piped vs file argument output
+	is identical.
+
+	ffpry changes:
+
+	Beginning initial development of Rabin Karp Rolling hash function
+	implementations which has replaced the hashing function used
+	in version 2 in the ffpry executable.  This has provided a 
+	significant speedup in k-mer counting.
+	Here is a speed comparison:
+	
+	ffpry -l 10 -d NC_008253.fna             ------    9.7s (v.3.0)
+        ffpry -l 10 -d NC_008253.fna             ------ 1m28.2s (v.2.30
+
+	Removed all-possible/-a flag from ffpry.  The only way to generate
+	columnar output from ffpry is via the -f flag and specify a specific
+	feature set.
+
+        -f specified features are now reverse complemented and classed as
+	is the input sequence by default.	
+
+	Added -r option which disables reverse complementing of the input
+	sequence as well as operates on the feature list.  
+	
+	Fixed ffpry -f long option to correct value as per man file.
+	
+	Other:
+
+	Fixed segmentation error in ffpboot
+
+	Future directions:
+
+	Rabin-Karp hash function will be implemented in ffpaa, ffptxt and
+	ffpre, ffpaat
+	
+	
+
+Version 2.30
+	Fixed bug when encountering IUPAC codes in input files to ffpry.
+
+Version 2.29
+	Fixed bug when piping input into ffpmerge.
+
+Version 2.28
+	Addition of examples directory with trees from 
+	Sims & Kim(2011) PNAS,108,8329-8334
+
+        BUGS: ffpre doesn't report errors for trying to open
+        non-existing second file arguments.
+
+        ffpre -l 5 loadfile -d
+
+Version 2.27
+	ffpjsd: Added checks for overly long taxa names using the -p,
+        phylip 'infile' output option.  Taxa names are now truncated to 10.
+
+Version 2.26
+	Inclusion of ffpdf utility which finds clade 'distinguishing
+	features' as implemented in the paper Sims & Kim (2011), PNAS
+	
+Version 2.25
+	Major rewrite of ffpreprof and ffpvprof to support
+	piping in of files and TTY detection.  Added
+	option for tmpfile directory specification in
+	ffpreprof and ffpvprof.  Added -a,--amino option
+	to ffpvprof.
+
+	Added license header to the scripts
+
+Version 2.23
+	Added LICENSE file
+
+	Added abilitity for C utilities to detect whether
+	the program is being run interactively or as part of
+	a pipeline.  If a utility is run interactively with no
+	arguments then an errror message is spit out.
+
+	Made parsing of FNA and FAA files more robust, especially
+	when the files are formated strangely or there are many
+	characters which must be ignored because they are not
+	part of the alphabet set used by the utility.
+
+	In ffpaa and ffpry:
+	Added a non-fatal warning message that indicates that a
+	particular fna file has zero keys stored in output.
+	This usually indicates that the file is empty or contains
+	only characters which are not part of the alphabet  set.
+
+Version 2.22
+	Fixed ffpjsd -r bug.  Previous output duplicated the diagonal.
+Version 2.21
+	Fixed non-one diagonals in similarity matrix -s option
+	Added test of columnar/key-value input to ffpboot command
+Version 2.20
+	Added Many new distance measures to ffpjsd
+Version 2.19
+        Added manhattan distance and pearson correlation(R) similarity and 1-R-squared
+        distance calculation to ffpjsd.  
+Version 2.18
+        Updated manual files to include a few undocumented options and implemented 
+        cosine distance calculation in ffpjsd.
+Version 2.17
+	Added ffpcomplex to package.  This is used to filter out high/low complexity features.
+Version 2.16
+	Fixed -p bug in ffpjsd when specifying input file in argument list
+Version 2.15
+	Completed ffpfilt utility.
+Version 2.14
+	Added (key,value) test to ffprwn utility.
+Version 2.11
+	Added the ffptxt utility which performs the ffp on 26 letter texts after removing non alphabetic
+	characters.
+Version 2.10
+	Added ffpaat utility which translates nucleic acid sequence first into amino acid sequence and then
+	hashes the amino acid based features.
+Version 2.09
+	Added -Multiple option to ffpry and ffpaa for processing of multiple sequences in one FNA/FAA file
+Version 2.05
+	Enable long options in script files ffpvprof, ffpreprof and updated man files
+Version 2.04
+	Enabled long options and updated all man files.
+Version 2.03
+	ffpry option -d bug fixed.  Now works with ATGC coding.
+Version 2.02
+	ffpcol now read input properly from stdin
+		Added -a switch for amino acid sequences
+	ffpaa no longer seg faults on Red-hat Linux system
+	Added manpage for ffpcol, ffpcol.1
+

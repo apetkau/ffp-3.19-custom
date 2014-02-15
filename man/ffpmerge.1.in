@@ -1,0 +1,77 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffpmerge 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffpmerge - This program merges the rows of an FFP into a single row.
+.SH SYNOPSIS
+.BI "ffpmerge [" "OPTION" "] ... [" "FILE" "] ..."
+.SH DESCRIPTION
+.PP
+The behavior of the program is to merge all rows of the FFP.  The
+FFP can be a columnar or key-valued FFP.
+FFPs will be read from standard input if no options are supplied and 
+.B ffpmerge 
+is called non-interactively (i.e. as part of a pipeline) or with a "-" in the 
+argument list.
+
+.SH OPTIONS
+.TP 
+.B -d, --disable
+Disable classing of amino acid and nucleotide sequences. 
+.TP
+.B -k, --keys
+Print key value pairs. Default is output in columnar format.
+.TP
+.B -a, --amino
+Input FFPs are animo acid sequences.
+.TP
+.B -t, --text
+Input FFPs are text.
+.TP
+.B -v, --version
+Display version.
+.TP
+.B -h, --help
+Display help message.
+.PP
+.SH EXAMPLES
+The main usage of this program is to merge separately calculated
+FFPs from different parts of a large genome.  For example consider
+a multi-chromosome genome.
+.PP
+.CODE ffpry -l 5 chr1.fna > chr1.vector
+.CODE ffpry -l 5 chr2.fna > chr2.vector
+.CODE ffpmerge chr*.vector > chrall.vector
+.PP
+The primary advantage of computing the vectors in this way
+is that separate chromosome vectors can be calculated on
+different processes and the process of 
+.I "l" "-mer" 
+counting can be distributed across a multi-processor
+architecture.  If you have many small fasta files which
+you need to merge there is no clear advantages to using the
+count and merge process shown above. In this case, concatenating
+the files together on the fly is more effective:
+.PP
+.CODE cat *.fna | ffpry -l 5 > merged.vector
+.PP
+.SH AUTHOR
+This program was written by Gregory E. Sims.
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpaa(1),
+.BR ffpry(1),
+.BR ffprwn(1),
+.BR ffpjsd(1),
+.BR ffpcol(1)

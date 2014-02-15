@@ -1,0 +1,204 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffpry 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffpry \- This program generates an FFP vector of nucleic acid RY-coded features.
+.SH SYNOPSIS
+.BI "ffpry [" "OPTION" "] ... [" "FILE" "] ..." 
+.SH DESCRIPTION
+.PP
+Given no options the default behavior of the program is to
+generate a Feature Frequency Profile (FFP) using features of length
+10 from FASTA input.  The FFP will contain the counts of nucleic acid features coded
+in purine(R)/pyrmidine(Y) format.  By default the feature keys will
+be printed alongside the feature counts. FASTA sequences will be read
+from standard input if no options are supplied and 
+.B ffpry 
+is called non-interactively (i.e. as part of a pipeline) or with a "-" in the 
+argument list.  In default mode features are stored in either the forward or
+reverse complement direction based upon alphabetical preference.
+.SH OPTIONS
+.TP
+.BI "\-l " LEN ", --length=" LEN	
+Changes the default length of features to 
+.IR "LEN" "." 
+The default length is 10. Maximum length allowed in 40.
+You may overide this maximum length by setting (and exporting)
+the environmental variable MAX_WORD_SIZE to a different value.
+.TP
+.BI "\-f " FILE ", --feature-list=" FILE
+.pp
+Changes the behavior of the program to read a list of features from 
+.IR "FILE" "."
+Features can be space or newline delimited. 
+As of v3.00 features are now matched,coded and reported in both the forward and reverse strand. To disable this behaviour use the 
+.B -r 
+option. By default the feature list is RY coded.
+.TP
+.BI "\-w " STR ", --mask=" STR
+.pp
+Use character 
+.I STR
+of length 
+.I LEN
+which specifies a character mask for the features. For example "1111101111" means to ignore the 6th character
+ of a character feature. Feature maskings functions in combination with both 
+.B -d 
+and 
+.BR "-r" "."  
+.TP
+.BI "\-z " K ", --rand-mask=" K
+.pp	
+Create a random weight mask which allows up to K mismatches.  No greater than the word length in mismatches is allowed. The weight mask is printed to standard error at the beginning of execution.  This option is cummulative with both options -d and -r.
+.TP
+.BI "\-s " INT ", --rand-seed=" INT
+.pp
+Seed the random number generator, to make randomization operations like 
+.B \-z 
+predictable across different runs.  This option is cummulative with both
+options 
+.B -d 
+and 
+.BR "-r" "."
+The defaul seeed to the random number generator is (system time) * (process ID).
+.TP
+.B \-q, --quiet
+.pp
+Run in quiet mode.  Suppresses printing to standard error.
+.TP
+.B \-d, --disable
+.pp	
+Disable RY coding to use ATGC coding.
+.TP
+.B -m, --multiple
+Calculate FFPs for multiple sequences in the input file.  Sequences must have their own FASTA '>' header.
+.TP
+.B -r, --disable-rev
+Disable counting of reverse complement features.
+.PP
+.SH EXAMPLES
+.PP
+The FFP phylogeny tools are designed to be used as filters in a pipeline.
+To create a key-form FFP use this syntax:
+.PP
+.CODE ffpry -l 3 test1.fna
+.PP
+This will generate an FFP of the form
+.PP
+.CODE RRY 4 RRR 5 YYR ...
+.PP
+To generate a profile of several nucleic acid sequences
+.PP
+.CODE ffpry -l 3 test1.fna test2.fna test3.fna
+.PP
+Or more succinctly
+.PP
+.CODE ffpry -l 3 test*.fna
+.PP
+The profile for each fna file will be produced on a newline delimited row.
+in the following format:
+.PP
+.CODE AAATGA	2	ATAGTA	4	ATGGGG	1 ...
+.CODE AAACGA	2	ATAGCA	1	CTGAGG	3 ...
+.PP
+This format is a key-value FFP.  
+.PP
+The utility
+.B ffprwn 
+which row normalizes data  must be presented with columnar data -- This
+data format contains only the count values and no keys.
+The columns represent a feature and each row of the FFP input corresponds
+to the counts of that feature in the individual FASTA files.
+This data format is recognized by several utilities, therefore you
+must convert a key valued FFP into a columnar format using
+.B ffpcol
+.PP
+For example several commands can be piped together to produce a 
+divergence matrix representing FFP similarity
+.PP
+.CODE ffpry -l 4 test*.fna | ffpcol | ffprwn | ffpjsd
+.PP
+If mismatches are desired at specific positions within a feature
+a mask can be applied by using the
+.B \-w
+option.  The format of the mask is a string of 1's and 0's which
+specify whether a match is required at that postion or whether
+mismatches are allowed.  For example:
+.PP
+.CODE ffpry -l 5 -w "10110" test*.fna 
+.PP
+This specifies that mismatches are allowed at the 2nd and 5th postions
+in every feature.  
+.PP
+The 
+.B \-z
+option can be used to randomly create a mask with 
+.B n 
+number of mismatches.  The mask is printed to stderr by 
+default.  The example below redirects the output of standard
+error to a file.  
+.PP
+.CODE ffpry -l 5 -z 2 test*.fna 2> mask
+.PP
+To disable the default RY coding use the 
+.B \-d
+option which will use 4 base ATGC coding.
+.PP
+If the frequencies for a small set of features is desired then the
+.BI "\-f " "FILE"
+option can be used. 
+.I FILE
+specifies the name of a file containing a list of features (RY or ATGC coded).
+The list of features can be tab, space or newline delimited.  
+Note the length of the features must also be specified using the 
+.B \-l
+option as well.    
+.PP
+By default all of the sequence data in a particular file is merged into one
+FFP. Multiple fasta records (multiple fasta sequences in a single file)  are parsed as one single sequence (for example, consider
+the case of multiple contigs in a single genomes).
+If your fasta files contain multiple sequences separated by '>' style records headers 
+.RB "and you wish to produce FFPs for each record then specify the " "-m" " option."
+.SH L\-MER FEATURES
+Features are stored in a mixture of the forward and reverse complement direction. For
+example, if the feature:
+.PP
+.CODE GTGTAGT
+.PP
+is encountered in the forward direction in the sequence it will be stored by
+default in the hash table and reported in the output in the reverse complement direction, which is:
+.PP
+.CODE ACTACAC
+.PP
+This decision is based upon hash function precedence, whichever direction has the 
+smallest hash index will be used.  This form of hashing allows for homology detection,
+independent of gene strandedness.  The behavior can be disabled with the 
+.B \-r
+option, which will force all features to be stored in the forward direction.
+Also, by default features are stored in RY coded form.  This has been shown to
+improve phylogenetic signal in a number of studies especially if highly varying 
+rate of mutation are suspected among different taxa.  Additionally RY coding
+is much faster, but is a compromise between speed and sensitivity.  Likewise
+this feature can be disabled with the 
+.B \-d
+option.     
+.SH AUTHOR
+This program was written by Gregory E. Sims.
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpaa(1),
+.BR ffprwn(1),
+.BR ffpmerge(1),
+.BR ffpjsd(1),
+.BR ffpcol(1)

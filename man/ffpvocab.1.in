@@ -1,0 +1,53 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffpvocab 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffpvocab \- This program determines the number of features which have frequencies above a threshold value.
+.SH SYNOPSIS
+.BI "ffpvocab [" "OPTION" "] ... [" "FILE" "] ..."
+.SH DESCRIPTION
+.PP
+Given no options, the default behavior of the program is to
+print out the average number of features with frequencies greater than
+two in all rows.  This value is defined as the number of vocabulary features.
+FFPs will be read from standard input if no options are supplied and 
+.B ffpvocab 
+is called non-interactively (i.e. as part of a pipeline) or with a "-" in the 
+argument list.  If a multi-row FFP is supplied then the default behavior is to
+average the number of vocabulary features across all rows.
+.SH OPTIONS
+.TP
+.BI "\-f " "INT" ", --freq-thresh=" "INT"
+Threshold to count a feature.  The default value is 2, which means a feature 
+must have a frequency greater than or equal to 2, in order to be counted.
+.TP
+.B \-h, --help
+.PP
+.SH EXAMPLES
+To count the number of features that occur 3 or more times
+in the ffp:
+.PP
+.CODE ffpry -l 5 file.fna | ffpvocab -f 3 
+.PP
+To calculate word usage for a range of lengths
+use
+.B ffpvprof.
+.PP
+.SH AUTHOR
+This program was written by Gregory E. Sims.
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpvprof(1),
+.BR ffpre(1),
+.BR ffpreprof(1)

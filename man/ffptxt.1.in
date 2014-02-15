@@ -1,0 +1,88 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffptxt 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffptxt \- This program generates an FFP vector of text data.
+.SH SYNOPSIS
+.BI "ffpaa [" "OPTION" "] ... [" "FILE"  "] ..."
+.SH DESCRIPTION
+.PP
+Given no options at all the default behavior of the program is to
+generate a Feature Frequency Profile (FFP) of text data, using 26
+alphabet letters, removing all non-alphabetic characters.  The 
+default feature length is 6.
+Text will be read from standard input if no options are supplied and 
+.B ffptxt
+is called non-interactively (i.e. as part of a pipeline) or with a "-" in the 
+argument list.
+.
+.SH OPTIONS
+.TP
+.BI "\-l " "LEN" ", --length=" "LEN"
+.RI "Changes the default length of features to " "LEN" ". The default length is 6."
+The maximum word size is 40.
+You may overide this maximum length by setting (and exporting)
+the environmental variable MAX_WORD_SIZE to a different value.
+.TP
+.BI "\-f " "FILE" ", --feature-list=" "FILE"
+Changes the behavior of the program to read
+.RI "a list of features from " "FILE" ". Features can"
+be space or newline delimited.
+.TP
+.B "\-h, --help"
+Display help message.
+.PP
+.SH EXAMPLES
+The command:
+.PP
+.CODE ffptxt -l 3 file*.txt
+.PP
+Will produce a output of this form, using features of length 3:
+.PP
+.CODE hel 2 elo 3 low 4 ...
+.CODE thi 3 ism 2 sme 5 ...
+.PP
+There will be one FFP line for each .txt file
+.PP
+This format can also be used:
+.PP
+.CODE ffptxt -l 4 file1.txt file2.txt file3.txt
+.PP
+The utilities in the FFP package can be used as fully
+qualified filters and can be used to build pipelines.
+This pipeline will create a phylip infile format distance
+matrix, using the Jensen Shannon Divergence:
+.PP
+.CODE ffptxt -l 7 file*.txt | ffpcol -t | ffprwn | ffpjsd -p > infile
+.PP
+.RB "Please note the use of the" " -t " "option in ffpcol to specify text."
+.PP
+Bootstrap and jacknife resampling can be done with the
+ffpboot program.
+.PP
+.SH FUTURE DIRECTIONS
+None.
+.PP
+.SH AUTHOR
+This program was written by Gregory E. Sims.
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpry(1),
+.BR ffprwn(1), 
+.BR ffpjsd(1),
+.BR ffpcol(1),
+.BR ffpmerge(1),
+.BR ffpboot(1),
+.BR ffpvprof(1),
+.BR ffpreprof(1)

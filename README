@@ -1,0 +1,619 @@
+FFP 3.18 - Feature Frequency Profile Phylogenetics Package
+Feb 20, 2012
+
+Author: Gregory E. Sims
+
+
+This is a collection of programs / utilities for implementing
+the FFP (Feature Frequency Profile) method of phylogenetic
+comparison.  FFP is a class of alignment-free methods suitable
+for (whole genome) comparisons from viral to mammalian scale 
+genomes.
+
+This method has been used to perform various phylogenetic
+analyses:
+
+
+Sims GE and Kim SH (2011)  Whole-genome phylogeny of Escherichia 
+coli/Shigella group by feature frequency profiles (FFPs). PNAS, 108, 
+8329-34.
+
+Jun SR, Sims GE, Wu GA, Kim SH. (2010) Whole-proteome phylogeny of
+prokaryotes by feature frequency profiles: An alignment-free method 
+with optimal feature resolution. PNAS, 107,133-8.
+
+Sims GE, Jun SR, Wu GA, Kim SH. (2009) Alignment-free genome comparison 
+with feature frequency profiles (FFP) and optimal resolutions.
+PNAS, 106,2677-82.
+
+Sims GE, Jun SR, Wu GA, Kim SH (2009) Whole-genome phylogeny 
+of mammals: evolutionary information in genic and nongenic regions. 
+PNAS. 106,17077-82.
+
+
+
+The utilities are designed to be implemented using unix
+command pipes.  In other words the output of programs
+can be linked to the input of other programs.  Therefore
+many of the scripts are acceptable as filters to be used
+in intermediate steps.
+
+
+This package contains the following programs/scripts:
+
+
+ffpgui		[Experimental] A perl/Tk based GUI 
+                interface for performing some of the
+                basic FFP operations.  This utility 
+                doesn't support grid-based/ 
+		multiprocessor job flow.  Also ffpgui is
+		in the beta stage, but it should give an
+		example of what can be done with the 
+		utilities listed below. Note, currently 
+		ffpgui 	will only work properly in Cygwin 
+		if you 	download and compile v804.029  
+		perl/Tk module from CPAN. Automatic installation 
+		of perl/Tk by Cygwin setup.exe will not
+		provide proper functionality (It uses a
+		much older version version of perl/Tk).
+		See INSTALL for further instructions.
+		Use --disable-gui to bypass installation. 
+
+ffpry		Constructs an FFP profile from nucleic acid 
+		sequences in FASTA format (.fna). 
+
+ffpaa           Constructs an FFP profile from amino acid 
+		sequences in FASTA format (.faa).
+
+ffprwn		This performs row normalization of the raw
+		FFP matrix.
+
+ffpjsd		This calculates the Jensen Shannon Divergence
+		between FFPs and outputs a Divergence
+		(Distance) matrix.  A variety of other 
+                distances/similarity metrics are available as
+		well.
+
+ffpboot		This performs bootstrapping or jacknifing
+		permutation of a raw FFP profile produced
+		by ffpry or ffpaa
+
+ffpvocab	This utility counts the number of words which
+		are used more than a paritcular threshold
+		in the FFP profile. This utility is used
+		to determine what is the best range of word
+		lengths to use for a genome collection
+
+ffpre		This utility calculates the Relative entropy
+		between the expected and observed frequencies
+		of features of length l (specified on the 
+		command line) using an L-2 Markov Model.
+
+ffpvprof	Script which calculates the word usage 
+		for a range of l.  Runs ffpvocab
+
+ffpreprof	Script which calculates the Relative entropy
+		between observed and predicted frequencies for
+		a range of l.  Runs ffpre.
+
+ffpmerge	This utility merges all rows of an FFP into
+		a single row.  Use this for merging segments
+		of an FFP, for example different chromosomes
+		of a larger genome.
+
+ffpcol          This utility converts a FFP which has been
+		written out in key/value format to a columnar
+		format, so that each column corresponds to
+		the same feature in each row of the FFP.           
+
+ffptxt		This utility creates a key/value FFP of text
+                data.  This is useful for performing an FFP
+		analysis of human language texts.  All non-
+		alphanumeric characters are ignored. 
+
+ffpfilt		Eliminate high/low frequency features using 
+                frequency cutoffs or probability based cutoffs 
+                assuming a normal or extreme value distributions.
+
+ffpcomplex      Eliminate high/low complexity features using
+                a complexity cutoff or probability based cutoff 
+                assuming a normal distribution.
+
+ffpdf		Finds clade distinguishing (diagnostic) features.
+		See Sims GE and Kim SH (2011) PNAS 108.
+
+ffptree		Build neighbor joining and UPGMA trees from ffpjsd
+		output.
+
+
+OTHER REQUISITE PROGRAMS
+
+We suggest that you obtain a copy of PHYLIP 
+(http://evolution.genetics.washington.edu/phylip.html)
+for building trees, however you can use any tree building program
+which will accept distance matrix input.   The utility ffpjsd
+will produce Phylip style 'infile's as well as raw distance
+matrices.  As of version 3.06, a tree building utility, ffptree
+is included, which will allow you build Newick style tree output
+directly as part of a ffp pipeline, which is compatible with the
+Phylip (3.69) utilities.
+
+
+QUICK START
+
+The best way to get a quick start is to read through the 
+simple tutorial PDF file located in the ./doc dir of this
+distribution.  It is also installed during the make install
+process in the /usr/local/share/doc/ffp directory (unless
+you have specified a different base directory using
+./configure --prefix during the build process).
+
+
+EXAMPLES
+
+***** How do I perform FFP comparison on a collection of nucleic
+      acid sequences, using a particular length of feature?
+
+
+Assuming your nucleic acid .fna files are all in the current
+working directory and are named with the .fna extension:
+
+ffpry -l 5  *.fna | ffpcol | ffprwn | ffpjsd > matrix
+
+for just two files (test1.fna and test2.fna):
+
+ffpry -l 5  test1.fna test2.fna | ffpcol  | ffprwn | ffpjsd > matrix
+
+
+The above example uses all features of length
+5.  The output of ffpry will be in key-value form,
+i.e. pairs of feature sequence followed by the raw
+count.  Each row corresponds to the features from
+that sequence, in the order of input.The output of 
+ffpry is piped to ffpcol, which converts the key value
+form into a column form, so that the raw counts 
+corresponds to the same feature across rows. The 
+utility ffprwn row normalizes each  row of the ffp
+feature matrix (output by ffpry), so that each 
+element of that row is a relative frequency. 
+The output is now piped to ffpjsd which calculates a 
+Jensen Shannon Divergence Matrix.
+
+Alternatively you can save the output at each step in 
+intermediate files in the following form:
+
+ffpry -l 5 *.fna > vectors
+ffpcol vectors > vectors.col
+ffprwn vectors.col > vectors.row
+ffpjsd vectors.row > matrix
+
+This may be useful if you want to perform multiple analyses
+on some intermediate file (For example bootstrapping -- see
+below).
+
+
+
+**** How do I script and run commands?
+
+
+All of these commands can be completed 
+programmatically in a shell script file 
+for example:
+
+In a file named, for instance ffptest.sh
+
+
+#!/bin/sh
+
+ffpry -l 5 *.fna > vectors
+ffpcol vectors > vectors.col
+ffprwn vectors.col > vectors.row
+ffpjsd vectors.row > matrix
+
+Save the script and make it executable using:
+
+chmod +x ffptest.sh
+
+then run the script from the command line
+
+./ffptest.sh
+
+
+**** How do I perform bootstraping?
+
+You can use the utility ffpboot to perform bootstrapping on
+the output of ffpry or ffpaa.
+
+
+ffpry -l 5 *.fna | ffpcol > vectors
+ffpboot vectors | ffprwn | ffpjsd > matrix
+
+
+
+**** How do I create multiple bootsrap sets?
+
+The example below creates 100 bootstrap pseudoreplicate
+JSD matrices.
+
+ffpry -l 5 *.fna | ffpcol > vectors
+for i in $(seq 1 1 20)
+	do
+	ffpboot vectors | ffprwn | ffpjsd > matrix.$i
+	done
+
+
+**** How do I create phylip format infiles?
+
+
+To create phylip format infiles to use with programs
+such as NEIGHBOR, Use the command ffpjsd -p [FILE] which 
+will generate a phylip format infile. FILE specifies
+the names of the taxa in the fna files you are using
+
+This file should whitespace or newline delimit the
+different taxa names.
+
+
+i.e.
+
+Taxa_1
+Taxa_2
+...
+Taxa_N
+
+
+Note the taxa should be in the order that they
+are read into ffpry (use ls *.fna to get that
+ordering).
+
+For example:
+
+ffpry -l 5 *.fna | ffpcol | ffprwn | ffpjsd -p names.txt > infile
+
+Or without the wildcards (*.fna)
+
+ffpry -l 5 1.fna 2.fna 3.fna | ffpcol | ffprwn | ffpjsd -p names.txt > infile
+
+The file names.txt should contain the taxa names of 1.fna, 2.fna and 3.fna
+in that order.
+
+**** How do I build a neighbor joining tree? ****
+
+In the sprit of the pipeline concept you can pipe output directly from
+ffpjsd into ffptree, provide it is in phylip infile format. Continuing
+the example from above:
+
+ffpry -l 5  *.fna | ffpcol | ffprwn | ffpjsd -p names.txt | ffptree -q > tree
+
+This produces a tree in Newick format.  If you want to see the
+human readable tree to, remove the -q switch.  Note, lots of 
+output will be produces, but written to standard error so you will
+need should redirect standard error to a file to save for later.
+
+ffpry -l 5 *.fna | ffpcol | ffprwn | ffpjsd -p names.txt | ffptree  2> progress > tree
+
+
+**** How do I do bootstrapping for use with Phylip?
+
+
+ffpry -l 5 *.fna | ffpcol > vectors
+for i in $(seq 1 1 20)
+        do
+        ffpboot vectors | ffprwn | ffpjsd -p species.txt >> infile
+        done
+
+This will create a multiple dataset file for use with phylip.
+Use the 'multiple datasets' option in the neighbor program.
+
+
+**** How do I perform FFP on large genomes?
+
+
+The most effective way to do this to calculate FFP's of 
+segments or units of the genome, for instance by chromosome
+or by contig, the ffp's of individual units can be
+merged together using the ffpmerge utility.
+
+Say you have 10 chromosomes. Calculate the FFP of
+each as a separate process and merge at the end of
+calculations.
+
+This is especially effective for multiprocess machines.
+
+
+For example:
+
+for fna_file in $(ls *.fna)
+	do
+	ffpry -l 10 $fna_file > $fna_file.vector &
+	done
+
+ffpmerge *.vector > merged.vector
+
+
+If your cluster machine uses a qeueing system (i.e. Grid 
+engine) then you can create individual shell scripts to
+give to the scheduler and then merge unit vector files after
+all scheduled jobs have completed.  A simple example using
+grid engine employs the $SGE_TASK_ID variable.
+
+Save a file containing the paths to your sequences
+There are 10 files total
+$ cat > sequences.txt
+seq.fna
+seq2.fna
+seq3.fna
+....
+Ctrl-D
+
+$ cat > submit.sh
+#!/bin/bash
+#submit.sh
+
+FILE=`head -n $SGE_TASK_ID <  $1 | tail -n 1`
+ffpry -l 10 $FILE   > $FILE.vector &
+
+In your shell:
+chmod +x submit.sh
+
+qsub -a 1-10 submit.sh sequences.txt
+
+Ctrl-d
+
+**** What if the ffp I get from ffprwn is very large and
+     ffpjsd take a long time?
+
+In this case you may want to break up the calculation of
+the JSD matrix, by assigning specific rows to different
+CPUs using the -r option.
+
+Starting with a normalized ffp with 10 rows:
+
+ffpjsd -r 1 vector.row > row.1
+
+The other 9 rows can be calculated by other CPUs, once 
+again using a cluster machine and the SGE_TASK_ID variable. 
+The results can be merged again using shell scripting:
+
+
+for i in $(seq 1 1 10)
+	do
+	cat row.$i >> matrix
+	done
+
+
+
+**** What is the difference between key/value FFPs and 
+columnar FFPs?
+
+A key/value FFP is an FFP form which is generated by
+default from the programs FFPry and FFPaa.  For instance
+the following command will generate a FFP of this form:
+
+ffpry -l 5 test*.fna
+
+
+The format will resemble:
+
+RYRRR 2 RRRRY 3 RRRRR 0 ....
+YRRRR 1 YYYRR 1 YRRRY 2 ...
+...
+
+
+Each row of the file is a FFP derived from a different
+sequence file.
+
+Columnar formats are required for input to ffprwn and
+ffpboot.
+
+
+In this format no feature keys are printed and the columns
+in the file correspond to the counts of that feature in
+each of the sequence files.  For very sparse FFPs the key/
+value FFP can generate smaller files.  For example this 
+command will generate a key-value FFP:
+
+ffpry -l 5 test*.fna
+
+
+To convert a key/value FFP into a columnar format for input
+to the other utilities the ffpcol utility should be used
+as a filter.
+
+ffpry -l 5 test*.fna | ffpcol
+
+
+The output from ffpcol can be used in ffprwn and ffpjsd
+
+
+ffpry -l 5 test*.fna | ffpcol | ffprwn | ffpjsd 
+
+
+**** How do I use a full 4 letter Nucleotide or 20 letter 
+     amino acid alphabet?
+
+By default character classing is used in both ffpry and 
+for amino acids in ffpaa. To disable this classing specify
+option -d for ffpry, ffpaa and ffpcol.  Please also take
+note that when you disable RY coding with the -d option
+you may need to add the -d option to subsequent filters
+such as ffpcol and ffpmerge.
+
+For example:
+
+ffpry -l 5 -d test*.fna | ffpcol -d | ffprwn | ffpjsd
+
+For amino acids:
+
+ffpaa -l 5 -d test*.faa | ffpcol -d -a | ffprwn | ffpjsd
+
+**** How do I use a spaced seed hash with FFP?
+
+FFP refers to spaced seeds as masks - from the
+manner in which masks are used in computer programming
+to 'mask out' certain bit positions in low level bit
+manipulations of numbers stored in binary format.
+A spaced seed or mask of '01110' will allow both
+CAAAG and TAAAA to match each other, as well as to
+match any 5 letter word with AAA in the middle.
+
+A mask can be specified using -w, for example:
+
+ffpaa -l 5 -d -w "01110" test*.faa | ffpcol -d -a | ffprwn | ffpjsd
+
+If you don't want explicitly supply a mask string
+but want to allow a certain number of mismatches, use
+-z.  Here for example is how to create a random mask
+with two mismatches allowed.
+
+ffpaa -l 5 -d -z 2 test*.faa | ffpcol -d -a | ffprwn | ffpjsd
+
+**** How do I compare text files with FFP?
+
+FFP has the ability to compare text files with the utility
+ffptxt.  The procedure is much the same as with nucleic acid
+and amino acid sequences.  Specify text with the -t option
+when using ffpcol.
+
+ffptxt -l 4 file*.txt | ffpcol -t | ffprwn | ffpjsd
+
+**** How do I get help?
+
+All the utilities come with their own manual page which is installed
+by default when using 'make install'.
+
+man ffpry
+
+will retrieve the manual for the ffpry utility.
+
+If you have installed ffp in some alternate location (i.e.
+by using ./configure --prefix), then the locations of the
+ffp manuals may not be in your MANPATH environmental variable.
+You can add the manual directory to MANPATH, or simply
+read the manuals directly using 
+
+man /pathtomanual/ffpry.1
+
+(Note the manual section extension '1').
+
+
+**** Example trees
+
+Some published examples are shown in the distribution
+'examples' directory.
+
+**** How do I run FFP in Windows?
+
+Use Cygwin (www.cygwin.com).  This package has been developed
+and tested to perform in both Linux and Cygwin.
+Cygwin is designed as an emulated Linux/Unix 
+environment which runs on the Windows operating
+system -- it includes the majority of the GNU compilers
+and utilities that are part of a standard Linux
+distribution and performs superbly (albeit with
+a small performace loss because of emulation).
+
+
+**** Multiple fastas in a single file
+
+By default the ffpry and ffpaa programs assume that a single
+file, regardless of the number of fasta records contained in
+that file, represents a single species/genome/proteome. Therefore
+the l-mer frequencies represent the counts for all fasta records.
+If you specify multiple files on the command line i.e.
+
+ffpry *.fna
+
+Which might expand (the expanding of which is done by your shell of
+course) to:
+
+ffpry test1.fna test2.fna test3.fna
+
+then 3 separate ffp lines will be printed in the output.  If in fact
+you want all of these results to be merged together into one FFP you
+can use the ffpmerge utility, or simply use the cat command, both
+of which should produce equivalent results.
+
+cat *.fna | ffpry 
+
+or
+
+ffpry *.fna | ffpmerge --keys
+
+If however you have a single (or multiple fasta files) with multiple
+records which you want to be individual FFPs then you must specify
+the -m option.
+
+ffpry -m *.fna
+
+
+**** How do I implement the alternate Hamming based distance refered to
+as the Evolutionary FFP distance in Sims and Kim (2011), PNAS, 108
+8329-34? 
+
+Trees presented in this paper are included in the examples subdirectory.
+To implement this type of analysis on your own use the following 
+snippet of shell script code (assuming you are using the bash shell).
+
+From your working directory containing all your genome fasta files
+(assuming small single fasta genomes).
+
+
+ffpry -l 20 *.fasta | ffpcol | ffpfilt -l 0.05 -u 0.95 -e > ffp.filtered
+
+for i in {1..100} ; do
+      ffpboot -j -p  0.1  ffp.filtered | ffpjsd -H -p species.txt
+done > infile
+
+
+The features are filtered to remove high and low frequency features.
+Then 100 pseudoreplicates are created using 10% jackknife sampling.
+The output is a PHYLIP style infile which can be used directly as 
+input to the PHYLIP tool NEIGHBOR.  The option argument to -p is a
+tab or newline delimited file containing the names of the taxa in the
+original order which was specified on the command line to the original
+ffpry invocation.  To confirm you have taxa named in the right order
+in your 'species.txt' taxa name file, execute this shell expansion.
+
+echo *.fasta
+
+This will show you the order (which will be identical to the ordering
+observed using ls *.fasta), in which you need to specify the names in
+species.txt.
+
+Rather than relying on the order from shell expansion you can specify
+the genome file arguments explicitly
+
+ffpry -l 20 genome1.fasta genome2.fasta genome3.fasta ... 
+
+See the examples subdirectory for more information, including sample
+trees generated using FFP and Phylip.
+
+**** How do I implement the block-FFP method  mentioned in
+Sims GE, Jun SR, Wu GA, Kim SH. (2009) Alignment-free genome comparison
+with feature frequency profiles (FFP) and optimal resolutions.
+PNAS, 106,2677-82.
+
+There is currently no script included in this distribution which will
+implement this method of genome comparison. Future releases will
+contain executables which implement Block-FFP.
+
+The main point to keep in mind is that FFP works best when you
+are comparing genomes/sequences of similar length -- and a good 
+guideline is to make sure that your genomes are within A-fold 
+the size of each other where A is the number of symbols in your
+alphabet.
+
+
+********
+
+
+
+
+
+Copyright (C) 2009-2012
+Author: Gregory E. Sims
+
+Report Bugs to gsims1997@yahoo.com
+
+

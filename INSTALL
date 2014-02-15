@@ -1,0 +1,134 @@
+FFP 3.18 - Feature Frequency Profile Phylogenetics Package
+Feb 20, 2012
+
+Author: Gregory E. Sims
+
+This is a collection of programs for implementing the FFP
+(Feature Frequency Profiles) method of phylogenetic comparison.
+
+
+The FFP utilities can be installed using the tradition syntax
+
+./configure
+
+
+By default the executables will be installed in /usr/bin. 
+To change this location or if you are not the superuser 
+(i.e. do not have root access), you can do this by specifying
+the install directory:
+
+./configure --prefix=/home/yourname/dir
+
+Make sure to add the /home/yourname/dir/bin to your PATH
+variable.
+
+To compile:
+
+make 
+
+
+To check the installation:
+
+make check
+
+All tests should pass.  If they do not please contact gesims@lbl.gov,
+and report which tests have failed with information about your 
+system such as the operating system and CPU type.
+
+To install:
+
+make install
+
+
+
+To use the ffpgui interface you will need to have the perl/tk
+module installed.  The most efficient way to do this on a linux
+machine is to use the perl CPAN shell.
+
+
+perl -MCPAN -e 'shell'
+cpan> install Tk
+
+
+Use --disable-gui to bypass installation of the ffpgui interface.
+The ffpgui system is still in beta form (i.e. experimental).  It will 
+not function properly in Cygwin IF you install the perl/Tk package 
+automatically via the cygwin setup.exe.  You must compile from source 
+using 804.029 which can be checked out using svn (aka. subversion):
+
+svn checkout https://svn.perl.org/modules/Tk/trunk
+
+cd trunk
+
+perl Makefile.PL x  # Don't forget the x!
+make
+make install
+
+Hopefully sometime soon 804.029 will be placed on CPAN, and replace
+804.027.   
+
+You will also need to install the X11 X windows libraries for
+Cygwin via setup.exe. Before running ffpgui, You will need to 
+start an x-windows session, via 'startxwin'.
+
+However any native linux X-windowing system will be able to use
+ffpgui without issue, provided you are using a system with X11
+enabled.  If running on your local machine there should be no
+issue, but if running on a remote host then you will need to have
+your DISPLAY variable set (in your shell's rc file, for example
+.bashrc), and you should log in to the remote system with the -Y
+option (enable X11 forwarding).
+
+#Enable X11
+export DISPLAY=:0.0
+
+#Enable X11 forwarding
+ssh -Y user@remotehost.com
+
+To see examples of how to use the FFP programs see the README
+file, or the doc/tutorial.pdf file.
+
+There is a full collection of man files which are placed in
+your system's man directories upon install.  If you have used
+the --prefix option you will need to update $MANDIR to specify
+the proper path for man to search for the manual files.
+
+In the doc/ subdirectory the manuals have been compiled into
+PDF form for quick reference. There is also a quick start tutorial
+located in the doc/ subdirectory.  Upon install these are placed
+in /usr/local/shared/doc/ffp or PREFIX/shared/doc/ffp (if you have
+used --prefix during configuration).
+
+Finally there are some examples of trees used in publications
+supplied in the examples/ directory.  Upon install these are
+placed in /usr/local/shared/examples/ffp or PREFIX/shared/doc/ffp.
+
+**** Common Error messages during compilation:
+
+troff: fatal error: can't find macro file s
+
+	You likely do not have a full install of the groff package.
+	To build the tutorial files using the Manuscript macro set,
+	you'll need to update your install of groff.  We have seen
+	this error on the Ubuntu 11.10 system. You will need to install
+	 groff. Try:
+
+	sudo apt-get install groff
+
+	which will give you access to full set of macros.
+
+Perl module Tk missing. Install using: perl -MCPAN -e 'install Tk'. 
+Or use configure with '--disable-gui' to disable ffpgui build.
+
+	There are two solutions. Install the required perl module.
+	Or disable gui compilations during the install.  Add the
+	--disable-gui flag to the configure invocation:
+
+	./configure --disable-gui
+
+	and then compile as normal.
+
+
+(C) 2009-2012
+gsims1997@yahoo.com
+

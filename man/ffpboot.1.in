@@ -1,0 +1,101 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffpboot 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffpboot \- This program performs bootstrap permutations of the FFP vector.
+.SH SYNOPSIS
+.BI "ffpboot [" "OPTION" "] ... [" "FILE" "] ..."
+.SH DESCRIPTION
+.PP
+Given no options, the default behavior of the program is to
+calculate a bootstrap permutation.
+This utility should be used
+as a filter before using 
+.B ffprwn.
+FFPs will be read from standard input if no options are supplied and
+.B ffpboot
+is called non-interactively (i.e. as part of a pipeline) or with a "-" in the 
+argument list.
+.SH OPTIONS
+.TP
+.BI "\-j, --jackknife"
+Perform deletion jacknife instead of bootstrap. Default
+deletion percentage is 1/e.
+.TP
+.BI "\-p " "FLOAT" ", --delete-prob=" "FLOAT"	
+.RI "Specify jacknife deletion Probabilitiy, " "FLOAT" ", ranging between 0 and 1."
+.TP
+.BI "\-s " "INT" ", --rand-seed=" "INT"	
+.RI "Specify random seed, " "INT" "."
+The default is (system time) * (process ID).
+.TP
+.B  "\-h, --help"
+Display help message.
+.PP
+.SH EXAMPLES
+To create bootstrap pseudoreplicate:
+.PP
+.CODE ffpry -l 6 test*.fna | ffpcol > vector
+.CODE ffpboot vector > boot
+.PP
+To create many pseudoreplicates use the shell's looping
+facilities.  This example below creates 100 psuedoreplicates,
+using a small snippet of Bash shell scripting -- the equivalent
+should be possible using all other shell variants (c-shell, zsh, etc.)
+.PP
+.CODE for i in $(seq 1 1 100) ; do
+.CODE \tffpboot vector > boot.$i
+.CODE done
+.PP
+.RB "The bootstrap pseudoreplicates can be used as input to " "ffprwn" ":"
+.PP
+.CODE ffpboot vector | ffprwn | ffpjsd
+.PP
+.RB "To perform a deletion jackknife instead use the " "-j" " option."
+.PP
+.CODE ffpboot -j -p 0.10 vector > jack
+.PP
+The above example sets the probability of feature deletion
+in the jackknifing process to 10%.
+.PP
+As of version 3.06, there is a streamlined method of generating
+pseudo-replicate trees, which can be used in the phylip program
+.CW consense
+to build a consensus tree. 
+.PP
+.CODE for i in {1..100} ; do
+.CODE \tffpboot vector | ffprwn | ffpjsd -p species.txt | ffptree -q
+.CODE done > intree
+.PP
+The final output 
+.CW intree
+contains multiple sets of Newick format tree files which can be 
+used directly in 
+.CW consense.
+.PP
+.SH FURTHER DIRECTIONS
+Option to create multiple replicates in a single exection.
+.SH AUTHOR
+This program was written by Gregory E. Sims.
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpaa(1),
+.BR ffpry(1),
+.BR ffprwn(1),
+.BR ffpjsd(1),
+.BR ffpcol(1),
+.BR ffpmerge(1),
+.BR ffpvprof(1),
+.BR ffptree(1),
+.BR ffpreprof(1)

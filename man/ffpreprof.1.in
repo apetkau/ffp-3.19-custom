@@ -1,0 +1,82 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffpreprof 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffpreprof \- Constructs a relative entropy profile.
+.SH SYNOPSIS
+.BI "ffpreprof [" "OPTION" "] ... [" "FILE" "] ..."
+.SH DESCRIPTION
+.PP
+.RB "This shell script is a wrapper for the utility " "ffpre" .
+Using it you can calculate the relative entropy over
+a range of feature lengths.  Results are displayed
+in columnar format, where the length is the first
+column and the relative entropy is the second column. This
+script should be used to give an indication of the
+upper limit of 
+.I l
+that is appropriate for phylogenic inference.
+.SH OPTIONS
+.TP
+.B \-d, --disable-ry 
+Use ATGC coding, default is RY.
+.TP
+.B \-a, --amino
+Input is amino acids.
+.TP
+.B \-t, --text
+Input is text.
+.TP
+.B \-r, --no-reverse
+Disable reverse complement matching.
+.TP
+.BI "\-s " "INT" ", --start=" "INT"
+Specify start length range, default 3.
+.TP
+.BI "\-e " "INT" ", --end=" "INT"
+Specify end length range, default 20.  The maximum
+word length is 40.
+You may overide this maximum length by setting (and exporting)
+the environmental variable MAX_WORD_SIZE to a different value.
+.
+.TP
+.BI "\-T " "DIR" ", --tmpdir=" "DIR"
+Specify location for temporary files.
+Only applies for reading from standard in.
+.TP
+.BI "\-p " "DIR" ", --path=" "DIR"
+Path to ffpre executable, if not in
+your path.
+.TP
+.B \-v, --version
+Print version information.
+.TP
+.B \-h, --help
+Print brief help message.
+.PP
+.SH EXAMPLES
+To calculate a relative entropy profile using lengths between 4 and 12:
+.PP
+.CODE ffpreprof -s 4 -e 12 test*.fna 
+.CODE ffpreprof < test1.fna
+.PP
+For more information about the relative entropy measure, see 
+.BR ffpre(1).
+.SH AUTHOR
+This program was written by Gregory E. Sims.
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpvocab(1),
+.BR ffpvprof(1),
+.BR ffpre(1)

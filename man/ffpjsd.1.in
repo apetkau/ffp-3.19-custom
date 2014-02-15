@@ -1,0 +1,222 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffpjsd 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffpjsd \- Calculates a Jensen Shannon divergence matrix from a row
+normalized vector FFP.
+.SH SYNOPSIS
+.BI "ffpjsd [" "OPTION" "] ... [" "FILE" "] ..."
+.SH DESCRIPTION
+.PP
+Given no options, the default behavior of the program is to
+generate a symmetric Jensen Shannon divergence matrix.  Rather
+than this divergence, other metrics can be used with the 
+appropriate options.
+FFPs will be read from standard input if no options are supplied and 
+.B ffpjsd  
+is called non-interactively (i.e. as part of a pipeline) or with a "-" in the 
+argument list.  Row normalization with 
+.B ffprwn 
+is required to use the default metric, the Jensen Shannon divergence.  Other 
+distance metrics such as the continuous distance measures can be used with
+or without row normalization with different effects.  Row normalization is 
+not necessary with binary distances and has no effect.
+.SH OPTIONS
+.TP
+.BI "\-p " "FILE" ", --phylip=" "FILE"
+Creates a phylip format 'infile'. FILE 
+specifies the taxon names to use. Must be equal to the number of FFP vectors rows.
+Note the taxon names should be unique.  Names over 10 characters in length will be
+truncated to exactly 10 -- truncation is enforced to maintain compatiblility
+witht Phylip package.
+.TP
+.BI "\-d " "INT" ", --precision=" "INT"
+Specify INT digits of decimal precision, the default is 2.
+.TP
+.BI "\-r " "ROW" ", --row=" "ROW" 
+Specify a single row of the distance matrix to calculate.  This option
+is useful for especially large matrices where the different rows can be 
+calculated in a multi-processor environment. Currently only works with
+the Jensen Shannon divergence metric.
+.TP
+.B  -s, --similarity
+Print a similarity matrix rather than a distance matrix.  This option effects
+the output of distances metrics which have a value normalized from 0 to 1 or
+-1 to 1, which includes the metrics specified by the options:
+.B \-RcmjtdNSaPBguyok.
+.TP
+.B  -h, --help
+Display help message.
+.TP
+.B  -v, --version
+Display version information.
+.PP
+.SS CONTINUOUS DISTANCE MEASURES
+.TP
+.B  -e, --euclid
+Calculate a Euclidean distance matrix rather than the default JSD matrix.
+Node, that the norm of the distance can by changed with the 
+.B \-n 
+option, however the default norm is 2.
+.TP
+.B  -E, --euclid2
+Calculate a Euclidean squared distance matrix.
+.TP
+.BI "\-n " "FLOAT" ", --normval=" "FLOAT"
+.RB "For option " "-e" ", change the n-norm distance (Default is n=2) to"
+any other value where n > 1
+.TP
+.B  -c, --cosine
+Calculate a Cosine distance matrix rather than default JSD matrix. With option
+.BR "-s" " this is the similarity matrix."
+.TP
+.B  -m, --manhattan
+Calculate a Manhattan distance matrix rather than default JSD matrix.
+.TP
+.B  -R, --pearson
+.RB "Use the pearson correlation coefficient. With the " "-s" " option a similarity"
+matrix will be printed out. Note this is R not, R_squared.
+Otherwise a distance will be printed, which is 1-R_squared.  
+.TP
+.B -C, --chebyshev
+Compute the Chebyshev distance, which is the maximum difference between
+a pair of features.
+.TP
+.B -b, --canberra
+Compute the Canberra distance matrix.
+.TP
+.B -H, --hamming
+Compute the hamming distance.
+.TP
+.B -L, --evol
+Compute the Evolutionary Distance used in E.coli Publications.
+.TP
+.PP
+.SS BINARY DISTANCE MEASURES
+.PP
+With these options the input FFPs are treated as binary data.  
+When two FFPs (i and j) are compared each
+distance measure uses a cross tabulation for pairwise feature 
+comparison with sums A, B, C and D.  A is the number of features 
+which are present in both vectors while D is the number of features
+that are absent in both vectors. B means the feature is present in 
+i and absent in j. C means the feature is absent in i but present in j.
+N is the sum of A+B+C+D.  All of the binary distance options can 
+.RB "be used together with the " "-s" " option to print a similarity matrix."
+THe binary distance do not need to be normalized with 
+.B ffprwn. 
+.TP
+.B -M, --matching
+Compute the matching distance matrix, which is 1-(A+D)/N. With
+.RB "the additional option " "-s" " this is the matching similarity: (A+D)/N."
+.TP
+.B -j, --jaccard
+Compute the Jaccard distance matrix, which is 1-A/(N-D).  With the 
+.RB "additional option " "-s" " this is the Jaccard similarity: A/(N-D)"
+.TP
+.B -t, --tanimoto
+Compute the Rogers-Tanimoto distance matrix, which is 1-(A+D)/((A+D)+2(B+C)).  
+.RB "With option " "-s" " this is the Tanimoto similarity matrix: (A+D)/((A+D)+2(B+C))."
+.TP
+.B -D, --dice
+Compute the Dice distance matrix, which is 1-2A/(2A+B+C).  With option
+.BR "-s" " this is the Dice similarity: 2A/(2A+B+C)."
+.TP
+.B -N, --antidice
+Compute the anti-Dice distance matrix, which is 1-A/(A+2(B+C)).  With option
+.BR "-s" " this is the anti-Dice similarity: A/(A+2(B+C))."
+.TP
+.B -S, --sneath            
+Compute the Sneath-Sokal distance matrix, which is 1-2(A+D)/(2(A+D)+(B+C)). With
+.RB "option " "-s" " this is the similarity matrix: 2(A+D)/(2(A+D)+(B+C))."
+.TP
+.B -a, --hamman
+Compute the Hamman distance matrix, which is 1-[((A+D)-(B+C))/N]^2. With
+.RB "option " "-s" " this is the similarity matrix: ((A+D)-(B+C))/N, which ranges from"
+-1 to 1.
+.TP
+.B -P, --phi
+Compute the Pearson Phi distance matrix, which is 1-[(AD-BC)/sqrt((A+B)(A+C)(D+B)(D+C))]^2.
+.RB " With option " "-s" " this is the similarity matrix: (AD-BC)/sqrt((A+B)(A+C)(D+B)(D+C)), which"
+ranges from -1 to 1.
+.TP
+.B -B, --anderberg
+Compute the Anderberg distance matrix, which is 1-(A/(A+B)+A/(A+C)+D/(C+D)+D/(B+D))/4.
+.RB "With option " "-s" " this is the similarity matrix: (A/(A+B)+A/(A+C)+D/(C+D)+D/(B+D))/4."
+.TP
+.B -g, --gower
+Compute the Gower distance matrix, which is 1-AD/sqrt((A+B)(A+C)(D+B(D+C)). With option
+.BR "-s" " this is the similarity matrix: AD/sqrt((A+B)(A+C)(D+B(D+C))."
+.TP
+.B -u, --russel
+.RB "Compute the Russel-Rao distance matrix, which is 1-A/N. With option " "-s" " this is the similarity"
+matrix: A/N.  
+.TP
+.B -y, --yule
+.RB "Compute the Yule distance matrix, which is 1-[(AD-BC)/(AD+BC)]^2.  With option " "-s"
+this is the similarity matrix: (AD-BC)/(AD+BC) which ranges from -1 to 1.
+.TP
+.B -o, --ochiai
+Compute the Ochiai distance matrix, which is 1-A/sqrt((A+B)(A+C)).  With option
+.BR "-s" " this is the similarity matrix: A/sqrt((A+B)(A+C))."
+.TP
+.B -k, --kulczynski
+Compute the Kulczynski distance matrix, which is 1-(A/(A+B)+A/(A+C))/2. With
+.RB "option " "-s" " this is the similarity matrix: (A/(A+B)+A/(A+C))/2."
+.PP
+.SH EXAMPLES
+.P
+This utility is used as the final filter and can
+produce a final distance matrix representing FFP based
+sequence similarity.
+.PP
+.CODE ffpry -l 5 test*.fna | ffpcol | ffprwn | ffpjsd > matrix
+.PP
+Using the
+.B -p
+option, 
+.B ffpjsd
+can be used to create Phylip format infile output. 
+.PP
+.CODE ffpaa -l 4 test*.faa | ffpcol -a | ffprwn | ffpjsd -p species.txt > infile 
+.PP
+The Phylip package's distance based tree methods can be used to produce
+phylogenetic trees.  Note that 
+.CW species.txt 
+should contain the names of the taxa that correspond to the rows of the matrix.
+As of version 3.06, 
+.B ffptree
+is included in the FFP package which will create neighbor joining or UPGMA trees.
+It can also be included in the general ffp pipeline to produce final tree 
+output in Newick format.  The pipeline below produces a neighbor joining tree:
+.PP
+.CODE ffpaa -l 4 test*.faa | ffpcol -a | ffprwn | 
+.CODE ffpjsd -p species.txt | ffptree -q > tree
+.PP
+.SH FURTHER DIRECTIONS
+Extend row based -r option to distance measures other than
+JSD.
+.SH AUTHOR
+This program was written by Gregory E. Sims.
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+opyright (C) [@]COPY[@] Gregory E. Sims
+.BR
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpaa(1),
+.BR ffpry(1),
+.BR ffprwn(1),
+.BR ffpboot(1),
+.BR ffpcol(1),
+.BR ffpmerge(1),
+.BR ffpvprof(1),
+.BR ffptree(1),
+.BR ffpreprof(1)

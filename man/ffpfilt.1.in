@@ -1,0 +1,132 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffpfilt 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffpfilt - This program filters FFP profiles based on numeric/statistical properties.
+.SH SYNOPSIS
+.BI "ffpfilt [" "OPTION" "] ... [" "FILE" "] ..."
+.SH DESCRIPTION
+.PP
+This utility can be used to filter high or low frequency features
+from the FFP matrix. The upper and/or lower limits can be set 
+using a raw frequency cutoff or a probability cutoff which
+assumes either a normal or an extreme value distribution. 
+Requires key-valued FFP input.  Note you should use this as a replacement for 
+.B ffpcol 
+in any pipelines (rather than in addition to) as 
+.B ffpfilt 
+produces columnar output.  Columnar output can be disabled with the
+.B --keys
+option. FFPs will be read from standard input if no options are supplied and 
+.B ffpfilt 
+is called non-interactively (i.e. as part of a pipeline) or with a "-" in the 
+argument list.  The default input is assumed to be nucleotide sequence.
+
+
+.SH OPTIONS
+.TP
+.B -s, --stats
+.PP
+Print statistics describing the FFP frequency distribution to
+standard error.
+.TP 
+.B -z, --zeros
+.PP
+Include zeros is calculation of statistical parameters. When few
+features are observed, but a long feature length is used this 
+has the effect of skewing the feature distribution towards zero.
+.TP
+.BI "-u " "FLOAT, " "--upper=" "FLOAT"
+.PP
+.RI "The upper threshold limit for raw frequencies where " "FLOAT" " can be "
+.RI "any frequency value or for probability distributions, in which case" " FLOAT "
+can range from 0 to 1.
+.TP
+.BI "-l " "FLOAT, " "--lower=" "FLOAT"
+.PP
+The lower threshold limit.
+.TP
+.B -f, --freq
+.PP
+Use raw frequencies for filtering
+.TP
+.B -n, --norm
+.PP
+Use a normal distribution for filtering
+.TP
+.B -e, --evd
+.PP
+Use an extreme value (Gumbel) distribution for filtering
+.TP 
+.B -d, --disable
+.PP
+Disable classing of amino acid and nucleotide sequences. 
+.TP
+.B -a, --amino
+.PP
+Input FFPs are animo acid sequences.
+.TP
+.B -t, --text
+.PP
+Input FFPs are text.
+.TP
+.B -k, --keys
+.PP
+Force key,value output.  Default it columnar output.
+.TP
+.B -h, --help
+.PP
+Display short help message.
+.TP
+.B -v, --version
+.PP
+Display version information.
+.PP
+.SH EXAMPLES
+The main usage of this progam is for filtering out high frequency
+features, for example large numbers of prophage copies in a genome
+might be need to be filtered out -- since they don't provide much
+useful phylogenetic signal.  Here we filter out all features which
+occur more than 5 times using the 
+.B \-u
+option.
+.PP
+.CODE ffpry -l 5 *.fna > vectors
+.CODE ffpfilt -f -u 5 vectors > vectors.filt
+.PP
+Features which occur rarely and features which occur frequently can
+be removed simultaneously.  This example excludes all features which
+occur more than 10 times and less than 2 times.
+.PP
+.CODE ffpfilt -f -u 10 -u 2
+.PP
+Finally we can assume that the feature frequencies follow a specific
+distribution.  Usually the extreme value distribution [EVD] is the appropriate choice,
+however you should confirm what the distribution of your feature frequencies are
+yourself.  We can exclude features that lie outside a certain range of the cummulative
+probability distribution.  Here we exclude all features which lie below
+10% and above 95% of the EVD cummulative distribution function.
+.PP
+.CODE ffpfilt -e -l 0.1 -u 0.95
+.PP
+.SH AUTHOR
+This program was written by Gregory E. Sims.
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpaa(1),
+.BR ffpry(1),
+.BR ffprwn(1),
+.BR ffpjsd(1),
+.BR ffpcol(1)
+

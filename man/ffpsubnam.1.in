@@ -1,0 +1,42 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffpsubnam 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffpsubnam \- Substitute taxa names in Phylip format infile.
+.SH SYNOPSIS
+.BI "ffpsubnam [" "OPTIONS" "] [" "NAMES" "] [" "INFILE" "]"
+.SH DESCRIPTION
+.PP
+This is a simple utility to change the names in a phylip format
+infile for those supplied by an input file.  
+.SH OPTIONS
+.TP
+.BI "\-o " "FILE" ",  --outfile=" "FILE"
+Specify output file.  Default is standard out.
+.TP
+.B  "\-v, --version"
+Display version information.
+.TP
+.B  "\-h, --help"
+Display help message.
+.PP
+.SH EXAMPLES
+None.
+.PP
+.SH AUTHOR
+This program was written by Gregory E. Sims.
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpaa(1),
+.BR ffpry(1)

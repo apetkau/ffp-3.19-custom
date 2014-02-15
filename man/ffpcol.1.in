@@ -1,0 +1,143 @@
+.de CW
+. nop \s-2\f[C]\\$*\f[]\s+2
+..
+.de CODE
+.in +0.5i
+. nop \s-2\f[C]\\$*\f[R]\s+2
+.in -0.5i
+..
+.TH ffpcol 1 "[@]DATE[@]" "Version [@]VERSION[@]" "FFP PHYLOGENY"
+.SH NAME
+ffpcol - This program creates columnar FFPs from key-value output of ffpry.
+.SH SYNOPSIS
+.BI "ffpcol [" "OPTION" "] ... [" "FILE" "] ..."
+.SH DESCRIPTION
+.PP
+Given no options, the default behavior of the program is to
+convert key-value FFPs to columnar format.  This utility is used to convert the output of
+.BR "ffpry" ","
+.BR "ffpaa" ","
+or
+.BR "ffptxt"
+.RB " to the format required for " ffprwn " if the FFP" 
+has been saved in key-value format.
+FFPs will be read from standard input if no options are supplied and 
+.B ffpcol  
+is called non-interactively (i.e. as part of a pipeline) or with a "-" in the file 
+argument list.  The default input type is a key-value nucleotide FFP. 
+When input is directed from a pipe a temporary file is created in the environmentally
+defined TMP directory or /tmp if this variable is undefined.
+
+.SH OPTIONS
+.TP
+.B \-h, --help
+Display help command.
+.TP
+.B \-a, --amino
+Input is an amino acid FFP. Default is nucleotide.
+.TP
+.B \-t, --text
+Input is 26 letter text. Default is nucleotide.
+.TP
+.B \-d, --disable
+Disable classing of either nucleotide or amino acid sequence.
+.TP
+.B \-V, --verbose
+Be more verbose.
+.TP
+.B \-v, --version
+Print version information
+.TP
+.B \-h, --help
+This help message
+.PP
+.SH EXAMPLES
+.PP
+A columnar format file produced by 
+.B ffpcol 
+is the main interchange format to pass
+FFPs to a number of other utilities.  Sample input from
+a feature counter such as 
+.B ffpry 
+may resemble something like this:
+.PP
+.CODE ATG	2	TGC	 3	GGA	4 ...
+.CODE TGC	1	CAC	 2	GGA	1 ...
+.PP
+From the key-value input format, 
+.B ffpcol
+will find all the features contained in all the FFPs
+and align the feature frequency in the same tab delimited column,
+printing out zeros if a feature is missing in a particular
+row.  The actual sequence of the feature is discarded at
+this point. The columnar format files produced from input like that above
+will look like:
+.PP
+.CODE  2	3	0	4
+.CODE  0	1	2	1
+.PP
+.RB "To convert a (key,value) FFP for use in " ffprwn, 
+simply arrange the conversion process
+as a pipeline, whereby the standard output of one utility is sent to the standard input of
+another:
+.PP
+.CODE ffpry -l 2 *.fna | ffpcol | ffprwn
+.PP
+To disable classing use this format 
+(take special node of the 
+.B \-d
+switch in both of the calls to
+.B ffpry 
+and 
+.BR "ffpcol" "):"
+.PP
+.CODE ffpry -l 4 -d *.fna | ffpcol -d | ffprwn
+.PP
+For amino acids, use the 
+.B \-a
+option:
+.PP
+.CODE ffpaa -l 4 *.faa | ffpcol -a | ffprwn
+.PP
+To disable classing for amino acids use
+the options
+.B \-a
+and 
+.BR "\-d" ","
+or in stacked form,
+.BR "\-ad" ":"
+.PP
+.CODE ffpaa -l 4 -d *.faa | ffpcol -ad | ffprwn
+.PP
+Likewise for text input use
+.BR "\-t" ":"
+.PP
+.CODE ffptxt -l 6 *.txt | ffpcol -t | ffprwn
+.PP
+Note when piping output from a utility into 
+.B ffpcol
+via a pipe that a temp file is created ( from the output of
+preceding command ), whereas input from file 
+arguments or via input redirection (i.e. 
+.CW ffpcol < file 
+) doesn't require temp files.  Temporary files are written
+to 
+.CW /tmp
+-- upon creation they are immediately unlinked
+so they are effectively 'hidden' temp files.
+.SH FUTURE DIRECTIONS
+Conversion to Rabin-Karp Hash function.
+.SH AUTHOR
+This program was written by Gregory E. Sims.
+.SH "REPORTING BUGS"
+Report bugs to <gesims@lbl.gov>.
+.SH COPYRIGHT
+Copyright (C) [@]COPY[@] Gregory E. Sims
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+.BR ffpry(1),
+.BR ffpaa(1)
+.BR ffptxt(1)
+.BR ffprwn(1),
+.BR ffpjsd(1)

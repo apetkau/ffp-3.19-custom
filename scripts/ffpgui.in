@@ -1,0 +1,824 @@
+#!/usr/bin/env perl
+# This code is distributed under a Non-commerical use 
+# License.  See LICENSE for more details.  Use of this
+# code must be properly attributed to its author
+# Gregory E. Sims provided that its use or derivative 
+# use is non-commercial in nature.  Proper attribution        
+# can be made by citing:
+#
+# Sims GE, et al (2009) Alignment-free genome 
+# comparison with feature frequency profiles (FFP) and 
+# optimal resolutions. Proc. Natl. Acad. Sci. USA.
+# 106, 2677-82.
+#
+# Gregory E. Sims (C) 2010-2012
+#
+#####################################################
+
+use strict;
+use Tk;
+use Tk::Dialog;
+use Tk::Text;
+use Tk::LabEntry;
+use File::Temp qw /tempfile tempdir/;
+use File::Path qw( remove_tree );
+
+use constant MAX_LENGTH => 40;
+use constant MAX_FILES => 1000;
+my $VERSION=[@]VERSION[@];
+
+# Consider placing all in switches
+my %distances= ('Jensen-Shannon'	=> '', 
+	       'Euclidean'		=> '-e', 
+	       'Squared Euclidean'	=> '-E',
+	       'Cosine'			=> '-c',
+	       'Manhattan'		=> '-m',
+	       'Canberra'		=> '-b',
+	       'Matching'		=> '-M',
+	       'Pearoson Correlation'	=> '-R',
+	       'Chebyshev'		=> '-C',
+	       'Jaccard'		=> '-j',
+	       'Rogers-Tanimoto'	=> '-t',
+	       'Dice'			=> '-D',
+	       'Anti-dice'		=> '-N',
+	       'Sneath-Sokal'		=> '-S',
+	       'Hamming'		=> '-H',
+	       'hamman'			=> '-a',
+	       'Pearson Phi'		=> '-P',
+	       'Anderberg'		=> '-B',
+	       'Gower'			=> '-g',
+	       'Russel-Rao'		=> '-u',
+	       'Yule'			=> '-y',
+	       'Ochiai'			=> '-o',
+	       'Kulczynski'		=> '-k');
+my %normMethods= ('Row Normalize'	=> '| ffprwn ',
+		 'Largest Row'		=> '| ffprwn -n ',
+		 'None'			=> '');
+my %complexMethods=('Range'		=>'',
+		    'Normal'		=>'-n');
+
+my %freqMethods=('Range'		=>'-f',
+		   'Extreme Value'	=>'-e',
+		   'Normal'		=>'-n');
+my @modes=('Nucleotide Sequence','Amino Acid Sequence','Text');
+my $modeIdx='Nucleotide Sequence'; #Default mode
+my $length=4;
+my $input_files='';  # Reference to a file array
+my $feature_file='';  # Reference to a file array
+my $mask='';
+my $precision=2;
+# Flags
+my $disable=0;
+my $reverse=0;
+my $similarity=0;
+my $multiple=0;
+my $distance='Jensen-Shannon';
+my $phylipfmt=0;
+my $normalize='Row Normalize';
+my $resample='None';
+my $complexFilter='None';
+my $freqFilter='None';
+my $treeMethod='None';
+my $delProb=0.28;
+my $replicates=100;
+my $complexUpper=0.95;
+my $complexLower=0.05;
+my $freqUpper=0.95;
+my $freqLower=0.05;
+my $lmerUpper=20;
+my $lmerLower=3;
+my $freqThresh=1;
+my $num_taxa=1;
+my $tmp = File::Temp->newdir(TEMPLATE => 'tempXXXXXX',
+	                    );
+
+#Signal handlers
+$SIG{'INT'}='clean_up';
+$SIG{'QUIT'}='clean_up';
+$SIG{'ABRT'}='clean_up';
+$SIG{'KILL'}='clean_up';
+$SIG{'EXIT'}='clean_up';
+
+
+			    
+my $mw = MainWindow->new;
+$mw->title("FFP gui Interface - $VERSION [Beta]");
+
+
+# Set up menu bar
+
+my $f_MenuBar = $mw->Menu;
+my $MenuFile   =$f_MenuBar->cascade(-label=>'File',
+                                 -accelerator => 'Alt-f',
+			         -underline => 0,
+			         -tearoff=>0 );
+
+
+	$MenuFile->command(-label=>'~Open File(s)', -command => sub { &fileDialog($mw,\$input_files) });
+	$MenuFile->command(-label=>'Load ~Feature List', -command => sub { &featureFileDialog($mw,\$feature_file) });
+	$MenuFile->command(-label=>'~Save Matrix Output', -command => sub { &saveMatrix() });
+	$MenuFile->command(-label=>'Save ~Tree Output', -command => sub { &saveTree() });
+	$MenuFile->command(-label=>'E~xit', -command => sub { &clean_up}); #Should be cleanup
+
+my $MenuOptions=$f_MenuBar->cascade(-label=>'Options',
+                                 -accelerator => 'Alt-o',
+			         -underline => 0,
+			         -tearoff => 0 );			
+	my $seqType=$MenuOptions->cascade(-label=>'~Input Sequence Type',
+					  -accelerator => 'i');
+		foreach(@modes) {
+			$seqType->radiobutton(
+			-label => $_,
+			-variable => \$modeIdx
+			);
+		}
+	my $lengthSel=$MenuOptions->cascade(-label=>'~L-mer Length',
+					    -accelerator => 'l');
+		foreach(1..40) {
+			$lengthSel->radiobutton(
+			-label => $_,
+			-variable => \$length
+			);
+		}	
+
+$MenuOptions->checkbutton(-label=>'~Disable Coding',
+                                 -accelerator => 'd',
+			         -variable =>\$disable );			
+
+$MenuOptions->checkbutton(-label=>'Disable ~Reverse Comp',
+                                 -accelerator => 'r',
+			         -variable =>\$reverse );			
+
+my $distSel=$MenuOptions->cascade(-label=>'D~istance Measure',
+                                -accelerator => 'i');
+		foreach(keys %distances) {
+			$distSel->radiobutton(
+			-label => $_,
+			-variable => \$distance
+			);
+		}	
+
+
+$MenuOptions->checkbutton(-label=>'~Force similarity',
+                                 -accelerator => 'f',
+			         -variable =>\$similarity );			
+
+$MenuOptions->checkbutton(-label=>'~Phylip output',
+                                 -accelerator => 'p',
+			         -variable =>\$phylipfmt );	
+
+$MenuOptions->checkbutton(-label=>'~Multiple FASTA headers',
+                                 -accelerator => 'm',
+			         -variable =>\$multiple );	
+my $mismatch_dialog = $mw->DialogBox(-title => 'Mismatch Mask',
+				-default_button=>'OK',				
+				-buttons=>['OK','Cancel']);
+
+	$mismatch_dialog->add('Label', 
+		-text => "Input a mismatch mask\n".
+		         "equal to the feature length\n".
+			 "e.g. 11011\n".
+		         "1 - Match\n0 - Mismatch\n"
+		             )->pack;
+	$mismatch_dialog->add('LabEntry',-textvariable=> \$mask, 
+		                        -width=>MAX_LENGTH, 
+					-label=>'Mask',
+		                        -labelPack => [-side => 'left']
+			    )->pack;
+
+
+my $mismatchSel=$MenuOptions->command(-label=>'Mi~smatch Mask',
+                                -accelerator => 's',
+			        -command => [$mismatch_dialog => 'Show']);
+
+my $precision_dialog = $mw->DialogBox(-title => 'Input Decimal Precision',
+				-default_button=>'OK',				
+				-buttons=>['OK','Cancel']);
+
+	$precision_dialog->add('LabEntry',-textvariable=> \$precision, 
+		                        -width=>4, 
+					-label=>'Number of Digits',
+		                        -labelPack => [-side => 'left']
+			    )->pack;
+
+
+my $precisionSel=$MenuOptions->command(-label=>'~Decimal precision',
+                                -accelerator => 'd',
+			        -command => [$precision_dialog => 'Show']);
+
+
+my $normType=$MenuOptions->cascade(-label=>'~Normalization',
+					  -accelerator => 'N');
+		foreach( keys %normMethods ) {
+			$normType->radiobutton(
+			-label => $_,
+			-variable => \$normalize
+			);
+		}
+
+my $jackknife_dialog = $mw->DialogBox(-title => 'Jackknife Resampling',
+				-default_button=>'OK',				
+				-buttons=>['OK','Cancel']);
+
+$jackknife_dialog->add('LabEntry',-textvariable=> \$delProb, 
+		                        -width=>5, 
+					-label=>'Deletion Probability',
+		                        -labelPack => [-side => 'left']
+			    )->pack;
+$jackknife_dialog->add('LabEntry',-textvariable=> \$replicates, 
+		                        -width=>5, 
+					-label=>'Pseudoreplicate Num',
+		                        -labelPack => [-side => 'left']
+			    )->pack;
+
+my $bootstrap_dialog = $mw->DialogBox(-title => 'Bootsrap Resampling',
+				-default_button=>'OK',				
+				-buttons=>['OK','Cancel']);
+
+$bootstrap_dialog->add('LabEntry',-textvariable=> \$replicates, 
+		                        -width=>5, 
+					-label=>'Pseudoreplicate Num',
+		                        -labelPack => [-side => 'left']
+			    )->pack;
+
+
+my $resampleType=$MenuOptions->cascade(-label=>'R~esample',
+					  -accelerator => 'e');
+		# These should be cleaned up
+		foreach( ('None')) {
+			$resampleType->radiobutton(
+			-label => $_,
+			-variable => \$resample
+			);
+		}
+
+		$resampleType->radiobutton(
+			-label => 'Bootstrap',
+			-variable => \$resample,
+			-command => [$bootstrap_dialog=> 'Show'] 
+			);
+
+		$resampleType->radiobutton(
+			-label => 'Jackknife',
+			-variable => \$resample,
+			-command => [$jackknife_dialog=> 'Show'] 
+			);
+
+
+my $complexFilter_dialog = $mw->DialogBox(-title => 'Complexity Filter',
+				-default_button=>'OK',				
+				-buttons=>['OK','Cancel']);
+
+$complexFilter_dialog->add('LabEntry',-textvariable=> \$complexUpper, 
+		                        -width=>5, 
+					-label=>'Upper Limit',
+		                        -labelPack => [-side => 'left']
+			    )->pack;
+
+$complexFilter_dialog->add('LabEntry',-textvariable=> \$complexLower, 
+		                        -width=>5, 
+					-label=>'Lower Limit',
+		                        -labelPack => [-side => 'left']
+			    )->pack;
+
+my $freqFilter_dialog = $mw->DialogBox(-title => 'Complexity Filter',
+				-default_button=>'OK',				
+				-buttons=>['OK','Cancel']);
+
+$freqFilter_dialog->add('LabEntry',-textvariable=> \$freqUpper, 
+		                        -width=>5, 
+					-label=>'Upper Limit',
+		                        -labelPack => [-side => 'left']
+			    )->pack;
+
+$freqFilter_dialog->add('LabEntry',-textvariable=> \$freqLower, 
+		                        -width=>5, 
+					-label=>'Lower Limit',
+		                        -labelPack => [-side => 'left']
+			    )->pack;
+
+
+
+
+
+
+my $complexFilterType=$MenuOptions->cascade(-label=>'~Complexity Filter',
+					  -accelerator => 'c');
+		# These should be cleaned up
+		foreach( ('None','Normal','Range')) {
+			$complexFilterType->radiobutton(
+			-label => $_,
+			-variable => \$complexFilter,
+			-command => [ $complexFilter_dialog, 'Show']
+			);
+		}
+
+my $freqFilterType=$MenuOptions->cascade(-label=>'~Frequency Filter',
+					  -accelerator => 'f');
+		# These should be cleaned up
+		foreach( ('None','Normal','Extreme Value','Range')) {
+			$freqFilterType->radiobutton(
+			-label => $_,
+			-variable => \$freqFilter,
+			-command => [ $freqFilter_dialog, 'Show']
+			);
+		}
+
+my $treeType=$MenuOptions->cascade(-label=>'~Tree output',
+					  -accelerator => 't');
+		# These should be cleaned up
+		foreach( ('None','Neighbor Joining','UPGMA')) {
+			$treeType->radiobutton(
+			-label => $_,
+			-variable => \$treeMethod
+			);
+		}
+
+# Tool Menu
+
+my $MenuTools   =$f_MenuBar->cascade(-label=>'Tools',
+                                 -accelerator => 'Alt-t',
+				 -tearoff => 0,
+			         -underline => 0 );		
+
+
+my $re_dialog = $mw->DialogBox(-title => 'Relative Entropy Profile',
+				  -default_button=>'OK',
+			          -buttons=> ['OK','Cancel']);				
+
+$re_dialog->add('LabEntry',-textvariable=> \$lmerLower, 
+		                        -width=>3, 
+					-label=>'Beginning L-mer Length',
+		                        -labelPack => [-side => 'left']
+			    )->pack;
+
+$re_dialog->add('LabEntry',-textvariable=> \$lmerUpper, 
+		                        -width=>3, 
+					-label=>'Upper L-mer Length',
+		                        -labelPack => [-side => 'left']
+			    )->pack;
+
+
+
+
+
+$MenuTools->command(-label=>'~Relative Entropy Profile',
+                      -accelerator => 'r',
+		      -command => sub { &runReProf() }
+		     );
+
+
+my $vocab_dialog = $mw->DialogBox(-title => 'Vocabulary Profile',
+				  -default_button=>'OK',
+			          -buttons=> ['OK','Cancel']);				
+
+$vocab_dialog->add('LabEntry',-textvariable=> \$lmerLower, 
+		                        -width=>3, 
+					-label=>'Beginning L-mer Length',
+		                        -labelPack => [-side => 'left']
+			    )->pack;
+
+$vocab_dialog->add('LabEntry',-textvariable=> \$lmerUpper, 
+		                        -width=>3, 
+					-label=>'Upper L-mer Length',
+		                        -labelPack => [-side => 'left']
+			    )->pack;
+
+$vocab_dialog->add('LabEntry',-textvariable=> \$freqThresh, 
+		                        -width=>3, 
+					-label=>'Frequency Threshold',
+		                        -labelPack => [-side => 'left']
+			    )->pack;
+
+
+$MenuTools->command(-label=>'~Vocabulary Profile',
+                      -accelerator => 'v',
+		      -command => sub { &runVocabProf()  }
+		     );
+
+
+my $MenuHelp   =$f_MenuBar->cascade(-label=>'Help',
+                                 -accelerator => 'Alt-h',
+				 -tearoff => 0,
+			         -underline => 0 );		
+
+my $ver_dialog = $mw->Dialog(-title => 'FFP Phylogeny',
+	                     -text => "FFP Phylogeny\nVersion $VERSION",
+			     -buttons => ['OK'],
+			     -bitmap => 'info');
+
+my $about_dialog = $mw->Dialog(-title => 'About FFP Phylogeny',
+   				-text => 'About FFP Phylogeny',
+			        -buttons=>['OK']);	
+
+	$MenuHelp->command(-label=>'Help', -command => sub {&help_window($mw)} );
+	$MenuHelp->command(-label=>'Version', -command =>
+	                                       [$ver_dialog => 'Show']);
+	$MenuHelp->separator;
+	$MenuHelp->command(-label=>'About',   -command =>
+	                                       [$about_dialog => 'Show']);
+
+
+my $MenuRun   =$f_MenuBar->command(-label=>'Run',
+                                 -accelerator => 'Alt-R',
+				 -command  => sub { &runFFP() },
+			         );
+$mw->configure(-menu=>$f_MenuBar, -takefocus=>1 );
+
+
+my $textBox = $mw->Scrolled('Text',
+	 -height=>'40',
+	  -width=>'100',
+	  -scrollbars => 'osoe'
+	  # -state=>'disabled',
+  	)->pack;
+
+
+MainLoop;
+
+
+# depends on global variables
+
+sub runVocabProf() {
+	my $response=$vocab_dialog->Show();
+	my $type='';
+
+	if ($input_files eq "") {
+		$textBox->insert("end","Warning: You must open FASTA files first!\n");
+		return;
+	}
+	if ($reverse)    { $reverse="-r"     } else {$reverse='' }
+	if ($disable)    { $disable="-d"     } else {$disable='' }
+	
+	if ($modeIdx eq 'Amino Acid Sequence') {$type='-a'}
+	if ($modeIdx eq 'Text') {$type='-t'}
+	if ($response eq 'OK' ) {
+		$textBox->insert("end","Running profile. Please wait.");
+		open(FILE,"ffpvprof $reverse $disable -f $freqThresh $type -s $lmerLower -e $lmerUpper @$input_files|");
+		while (my $line=<FILE>) {
+			$textBox->insert("end","$line");
+		}
+		close(FILE);	
+	}
+	
+}
+
+
+
+sub runReProf() {
+	my $response=$re_dialog->Show();
+	my $type='';
+
+	if ($input_files eq "") {
+		$textBox->insert("end","Warning: You must open FASTA files first!\n");
+		return;
+	}
+	if ($reverse)    { $reverse="-r"     } else {$reverse='' }
+	if ($disable)    { $disable="-d"     } else {$disable='' }
+	
+	if ($modeIdx eq 'Amino Acid Sequence') {$type='-a'}
+	if ($modeIdx eq 'Text') {$type='-t'}
+	if ($response eq 'OK' ) {
+		$textBox->insert("end","Running profile. Please wait.");
+		open(FILE,"ffpreprof $reverse $disable $type -s $lmerLower -e $lmerUpper @$input_files|");
+		while (my $line=<FILE>) {
+			$textBox->insert("end","$line");
+		}
+		close(FILE);	
+	}
+	
+}
+
+
+sub saveMatrix {
+my $tmpdir=$tmp->dirname;
+my @types= (["Matrix files",[qw/.mat/]]);
+
+my $file = $mw->getSaveFile(-filetypes => \@types,
+                            -defaultextension => ".mat"
+			);
+
+if (-e "$tmpdir/ffp.jsd.0") {
+	system("cat tmpdir/ffp.jsd.* > $file")
+} else {
+	system("mv $tmpdir/ffp.jsd $file");			
+}
+}
+
+
+sub saveTree {
+my $tmpdir=$tmp->dirname;
+my @types= (["Newick tree files",[qw/.nwk/]]);
+
+my $file = $mw->getSaveFile(-filetypes => \@types,
+                            -defaultextension => ".nwk"
+			);
+
+if (-e "$tmpdir/ffp.jsd.0") {
+	system("cat tmpdir/ffp.jsd.* > $file")
+} else {
+	system("mv $tmpdir/ffp.jsd $file");			
+}
+}
+
+
+
+
+
+
+sub fileDialog {
+my ($w,$file) = @_;
+
+my @types= (["FASTA Files",[qw/.fasta .fna .faa/]]);
+
+$$file = $w->getOpenFile(-filetypes => \@types,
+			 -multiple  => MAX_FILES );
+if ($$file) {
+	foreach (@$$file) {
+		$textBox->insert("end","Opening $_.\n");
+	}
+}
+}
+
+
+sub featureFileDialog {
+	my ($w,$file) = @_;
+	my @types= (["Text File",[qw/.csv .txt/]]);
+	$$file = $w->getOpenFile(-filetypes => \@types);
+	if ($$file) {
+		$textBox->insert("end","Opening Feature @$$file.\n");
+	}
+}
+
+
+
+
+sub runFFP {
+	# make temp files
+	my $feature;
+	my $maskOpt='';
+	my $precisionOpt='';
+	my $columnar = 0;
+	if ($reverse)    { $reverse="-r"     } else {$reverse='' }
+	if ($disable)    { $disable="-d"     } else {$disable='' }
+	if ($similarity) { $similarity="-s"  } else {$similarity='' }
+	if ($multiple) {   $similarity="-m"  } else {$multiple='' }
+	if ($mask) {  $maskOpt="-w $mask" } else {$maskOpt=''}
+	if ($feature_file) {$feature= "-f @$feature_file"} else {$feature=''}
+	if (!$input_files) {
+		$textBox->insert("end","Warning: No input file(s) opened.\n");
+		return;
+	}
+
+
+	# It should be possible to merge dna aa and text into one group of comands
+
+	my $tmpdir=$tmp->dirname;
+	
+	$textBox->insert("end","Running FFP $modeIdx.\n");
+	if ( $modeIdx eq "Nucleotide Sequence" ) {
+		$textBox->insert("end","Counting l-mers from input.\n");
+		system("ffpry -q $maskOpt $multiple $reverse $disable -l $length $feature  @$input_files > $tmpdir/ffp ");
+		$textBox->insert("end","Done. Writing to $tmpdir/ffp.\n");
+		if ($complexFilter ne "None") {
+			$textBox->insert("end","Filtering features by complexity.\n");
+			system("ffpcomplex $disable $complexMethods{$complexFilter} $tmpdir/ffp > $tmpdir/ffpcomplex");
+			system("mv $tmpdir/ffp $tmpdir/ffp.prefilter ; mv $tmpdir/ffpcomplex $tmpdir/ffp");
+		}
+		if ($freqFilter ne "None" ) {
+			$textBox->insert("end","Filtering Features by frequency.\n");
+			system("ffpfilt -k $disable $freqMethods{$freqFilter} -u $freqUpper -l $freqLower $tmpdir/ffp > $tmpdir/ffpcomplex");
+			system("mv $tmpdir/ffp $tmpdir/ffp.prefilter2 ; mv $tmpdir/ffpcomplex $tmpdir/ffp");
+			$columnar=1;
+		}
+
+
+
+	if ($resample eq "None") {	
+		if ($normMethods{$normalize}) {
+			$precisionOpt="-d $precision";
+		}
+		#Filter it by complexity
+		$textBox->insert("end","Converting $tmpdir/ffp to Columnar form.\n");
+		system("ffpcol $disable $tmpdir/ffp $normMethods{$normalize} $precisionOpt >  $tmpdir/ffp.col ");
+		$textBox->insert("end","Done. Writing to $tmpdir/ffp.col.\n");
+		$textBox->insert("end","Constructing Distance/Similarity Matrix.\n");
+		$num_taxa=`wc -l < $tmpdir/ffp.col`;
+		chomp $num_taxa;
+		system("seq 1 1 $num_taxa > $tmpdir/species.txt");
+		system("ffpjsd $precisionOpt $distances{$distance} $similarity -p $tmpdir/species.txt $tmpdir/ffp.col >  $tmpdir/ffp.jsd");
+		$textBox->insert("end","Done writing to $tmpdir/ffp.jsd.\n");
+	} else {
+		$textBox->insert("end","Done. Beginning Bootstrap/Jackknife resampling.\n");
+		$textBox->insert("end","Converting $tmpdir/ffp to Columnar form.\n");
+		system("ffpcol $disable $tmpdir/ffp > $tmpdir/ffp.col");
+		$num_taxa=`wc -l < $tmpdir/ffp.col`;
+		chomp $num_taxa;
+		system("seq 1 1 $num_taxa > $tmpdir/species.txt");
+		for (my $i=0; $i < $replicates; $i++) {
+			$textBox->insert("end","Generating replicate $i.\n");
+			if ($resample eq "Jackknife") {
+				system("ffpboot -j -p $delProb -s $i $tmpdir/ffp.col $normMethods{$normalize} $precisionOpt > $tmpdir/ffp.boot.$i ");
+			} else {	
+				system("ffpboot -s $i $tmpdir/ffp.col $normMethods{$normalize} $precisionOpt > $tmpdir/ffp.boot.$i ");
+			}
+			$textBox->insert("end","Done. Writing to file $tmpdir/ffp.boot.$i\n");
+			$textBox->insert("end","Computing Pseudo replicate matrix\n");
+			system("ffpjsd $precisionOpt $distances{$distance} $similarity -p $tmpdir/species.txt $tmpdir/ffp.boot.$i >  $tmpdir/ffp.jsd.$i");
+			$textBox->insert("end","Done. Writing matrix to $tmpdir/ffp.jsd.$i\n");
+		}
+	}
+	} elsif ( $modeIdx eq "Amino Acid Sequence") {
+		$textBox->insert("end","Counting l-mers from input.\n");
+		system("ffpaa -q $maskOpt $multiple $disable -l $length $feature  @$input_files > $tmpdir/ffp ");
+		$textBox->insert("end","Done. Writing to $tmpdir/ffp.\n");
+		if ($complexFilter ne "None") {
+			$textBox->insert("end","Filtering features by complexity.\n");
+			system("ffpcomplex -a $disable $complexMethods{$complexFilter} $tmpdir/ffp > $tmpdir/ffpcomplex");
+			system("mv $tmpdir/ffp $tmpdir/ffp.prefilter ; mv $tmpdir/ffpcomplex $tmpdir/ffp");
+		}
+		if ($freqFilter ne "None" ) {
+			$textBox->insert("end","Filtering Features by frequency.\n");
+			system("ffpfilt -a -k $disable $freqMethods{$freqFilter} -u $freqUpper -l $freqLower $tmpdir/ffp > $tmpdir/ffpcomplex");
+			system("mv $tmpdir/ffp $tmpdir/ffp.prefilter2 ; mv $tmpdir/ffpcomplex $tmpdir/ffp");
+			$columnar=1;
+		}
+
+
+
+		if ($resample eq "None") {	
+			if ($normMethods{$normalize}) {
+				$precisionOpt="-d $precision";
+			}
+			#Filter it by complexity
+			$textBox->insert("end","Converting $tmpdir/ffp to Columnar form.\n");
+			system("ffpcol -a $disable $tmpdir/ffp $normMethods{$normalize} $precisionOpt >  $tmpdir/ffp.col ");
+			$num_taxa=`wc -l < $tmpdir/ffp.col`;
+			chomp $num_taxa;
+			system("seq 1 1 $num_taxa > $tmpdir/species.txt");
+			$textBox->insert("end","Done. Writing to $tmpdir/ffp.col.\n");
+			$textBox->insert("end","Constructing Distance/Similarity Matrix.\n");
+			system("ffpjsd $precisionOpt $distances{$distance} $similarity -p $tmpdir/species.txt $tmpdir/ffp.col >  $tmpdir/ffp.jsd");
+			$textBox->insert("end","Done writing to $tmpdir/ffp.jsd.\n");
+		} else {
+			$textBox->insert("end","Done. Beginning Bootstrap/Jackknife resampling.\n");
+			$textBox->insert("end","Converting $tmpdir/ffp to Columnar form.\n");
+			system("ffpcol -a $disable $tmpdir/ffp > $tmpdir/ffp.col");
+			$num_taxa=`wc -l < $tmpdir/ffp.col`;
+			chomp $num_taxa;
+			system("seq 1 1 $num_taxa > $tmpdir/species.txt");
+			for (my $i=0; $i < $replicates; $i++) {
+				$textBox->insert("end","Generating replicate $i.\n");
+				if ($resample eq "Jackknife") {
+					system("ffpboot -j -p $delProb -s $i $tmpdir/ffp.col $normMethods{$normalize} $precisionOpt > $tmpdir/ffp.boot.$i ");
+				} else {	
+					system("ffpboot -s $i $tmpdir/ffp.col $normMethods{$normalize} $precisionOpt > $tmpdir/ffp.boot.$i ");
+				}
+				$textBox->insert("end","Done. Writing to file $tmpdir/ffp.boot.$i\n");
+				$textBox->insert("end","Computing Pseudo replicate matrix\n");
+				system("ffpjsd $precisionOpt $distances{$distance} $similarity -p $tmpdir/species.txt $tmpdir/ffp.boot.$i >  $tmpdir/ffp.jsd.$i");
+				$textBox->insert("end","Done. Writing matrix to $tmpdir/ffp.jsd.$i\n");
+			}
+
+		}
+	} elsif ( $modeIdx eq "Text") {
+		$textBox->insert("end","Counting l-mers from input.\n");
+		system("ffptxt -l $length $feature  @$input_files > $tmpdir/ffp ");
+		$textBox->insert("end","Done. Writing to $tmpdir/ffp.\n");
+		if ($complexFilter ne "None") {
+			$textBox->insert("end","Filtering features by complexity.\n");
+			system("ffpcomplex -t $disable $complexMethods{$complexFilter} $tmpdir/ffp > $tmpdir/ffpcomplex");
+			system("mv $tmpdir/ffp $tmpdir/ffp.prefilter ; mv $tmpdir/ffpcomplex $tmpdir/ffp");
+		}
+		if ($freqFilter ne "None" ) {
+			$textBox->insert("end","Filtering Features by frequency.\n");
+			system("ffpfilt -t -k $disable $freqMethods{$freqFilter} -u $freqUpper -l $freqLower $tmpdir/ffp > $tmpdir/ffpcomplex");
+			system("mv $tmpdir/ffp $tmpdir/ffp.prefilter2 ; mv $tmpdir/ffpcomplex $tmpdir/ffp");
+			$columnar=1;
+		}
+
+
+
+		if ($resample eq "None") {	
+			if ($normMethods{$normalize}) {
+				$precisionOpt="-d $precision";
+			}
+			#Filter it by complexity
+			$textBox->insert("end","Converting $tmpdir/ffp to Columnar form.\n");
+			system("ffpcol -t $disable $tmpdir/ffp $normMethods{$normalize} $precisionOpt >  $tmpdir/ffp.col ");
+			$textBox->insert("end","Done. Writing to $tmpdir/ffp.col.\n");
+			$textBox->insert("end","Constructing Distance/Similarity Matrix.\n");
+			$num_taxa=`wc -l < $tmpdir/ffp.col`;
+			chomp $num_taxa;
+			system("seq 1 1 $num_taxa > $tmpdir/species.txt");
+			system("ffpjsd $precisionOpt $distances{$distance} $similarity -p $tmpdir/species.txt $tmpdir/ffp.col >  $tmpdir/ffp.jsd");
+			$textBox->insert("end","Done writing to $tmpdir/ffp.jsd.\n");
+		} else {
+			$textBox->insert("end","Done. Beginning Bootstrap/Jackknife resampling.\n");
+			$textBox->insert("end","Converting $tmpdir/ffp to Columnar form.\n");
+			system("ffpcol -t $disable $tmpdir/ffp > $tmpdir/ffp.col");
+			$num_taxa=`wc -l < $tmpdir/ffp.col`;
+			chomp $num_taxa;
+			system("seq 1 1 $num_taxa > $tmpdir/species.txt");
+			for (my $i=0; $i < $replicates; $i++) {
+				$textBox->insert("end","Generating replicate $i.\n");
+				if ($resample eq "Jackknife") {
+					system("ffpboot -j -p $delProb -s $i $tmpdir/ffp.col $normMethods{$normalize} $precisionOpt > $tmpdir/ffp.boot.$i ");
+				} else {	
+					system("ffpboot -s $i $tmpdir/ffp.col $normMethods{$normalize} $precisionOpt > $tmpdir/ffp.boot.$i ");
+				}	
+				$textBox->insert("end","Done. Writing to file $tmpdir/ffp.boot.$i\n");
+				$textBox->insert("end","Computing Pseudo replicate matrix\n");
+				system("ffpjsd $precisionOpt $distances{$distance} $similarity -p $tmpdir/species.txt $tmpdir/ffp.boot.$i >  $tmpdir/ffp.jsd.$i");
+				$textBox->insert("end","Done. Writing matrix to $tmpdir/ffp.jsd.$i\n");
+			}
+		}
+
+
+	} else {
+		# Should never see
+	}
+
+        # Build trees
+
+	if ($treeMethod eq "Neighbor Joining") {
+		# add error checking for not using phylip output
+		$textBox->insert("end","Computing Neighbor Joining tree.\n");
+		if ($resample eq "None") {
+			system("ffptree $tmpdir/ffp.jsd > $tmpdir/tree 2> $tmpdir/progress ");
+			printFileToTextBox($textBox,"$tmpdir/progress");
+		} else {
+			for (my $i=0; $i < $replicates; $i++) {
+				system("ffptree $tmpdir/ffp.boot.$i > $tmpdir/tree.$i 2> $tmpdir/progress ");
+				printFileToTextBox($textBox,"$tmpdir/progress");
+			}
+		}
+	} elsif ($treeMethod eq "UPGMA" ) {
+		$textBox->insert("end","Computing UPGMA tree.\n");
+		if ($resample eq "None") {
+			system("ffptree -n $tmpdir/ffp.jsd > $tmpdir/tree 2> $tmpdir/progress");
+			printFileToTextBox($textBox,"$tmpdir/progress");
+		} else {
+			for (my $i=0; $i < $replicates; $i++) {
+				system("ffptree -n $tmpdir/ffp.boot.$i > $tmpdir/tree.$i 2> $tmpdir/progress ");
+				printFileToTextBox($textBox,"$tmpdir/progress");
+			}
+		}
+
+
+	} else {
+	}
+
+
+	$textBox->insert("end","Complete.\n");
+	$textBox->see("end");
+}
+
+sub printFileToTextBox() {
+	my ($textBox,$file)=@_;
+	
+	open(FILE,$file);
+	while (my $line=<FILE>) {
+		$textBox->insert("end",$line);
+	}
+	close(FILE);
+}
+
+
+
+sub help_window() {
+my ($parent)=@_;
+my $help_win=$parent->Toplevel(-title => "FFP Phylogeny Help"
+
+                              );
+my $t=$help_win->Scrolled('Text',
+			-width => 80,
+			-height => 25,
+			-wrap => "none",
+			-scrollbars => "osoe")->pack;
+$help_win->Button(-text=> "Done",
+                  -command => [$help_win=>'destroy'])->pack;	
+
+fill_textbox($t);
+
+
+}
+
+
+
+sub fill_textbox() {
+my ($t) =@_;
+# set this with config
+open(FILE,"[@]DOC[@]/README");
+while (my $line=<FILE>) {
+	$t->insert('end',$line);
+}
+close(FILE);
+
+}
+
+sub clean_up() {
+	remove_tree($tmp);	
+	exit 0;
+}
+
