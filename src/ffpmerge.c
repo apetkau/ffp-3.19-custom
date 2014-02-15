@@ -33,6 +33,7 @@ char PROG_NAME[FILENAME_MAX];
 
 unsigned merge(FILE * fp, unsigned **vals, unsigned size);
 void mergeHash(FILE * fp);
+void mergeHashComplement(FILE * fp);
 int isKeyBased(FILE * fp);
 int getKeyLength(FILE * fp);
 
@@ -45,6 +46,7 @@ The FFP can be a columnar or key-valued FFP.\n\
 \t-a, --amino\tInput is amino acid\n\
 \t-d, --disable\tDisable classing of input\n\
 \t-k, --keys\tPrint key-value pairs.\n\
+\t-c, --complement\tMerges keys with rev complement (must have -d).\n\
 \t-v, --vesion\tDisplay version\n\
 \t-h, --help\tThis messsage\n\n\
 Copyright (c) %s\n\
@@ -69,6 +71,7 @@ int main(int argc, char **argv)
     bool aflag = false;
     bool tflag = false;
     bool kflag = false;
+    bool cflag = false;
     int option_index = 0;
 
 
@@ -78,6 +81,7 @@ int main(int argc, char **argv)
 	{"keys", no_argument, 0, 'k'},
 	{"amino", no_argument, 0, 'a'},
 	{"text", no_argument, 0, 't'},
+	{"complement", no_argument, 0, 'c'},
 	{"version", no_argument, 0, 'v'},
 	{0, 0, 0, 0}
     };
@@ -86,7 +90,7 @@ int main(int argc, char **argv)
 
     strcpy(PROG_NAME,basename( argv[0] ));
 
-    while ((opt = getopt_long(argc, argv, "khdatv",
+    while ((opt = getopt_long(argc, argv, "khdactv",
 			      long_options, &option_index)) != -1)
 	switch (opt) {
 	case 'd':
@@ -105,6 +109,9 @@ int main(int argc, char **argv)
 	case 'k':
 	    kflag = !kflag;
 	    break;
+	case 'c':
+	    cflag = !cflag;
+	    break;
 	case 'h':
 	    printUsageStr();
 	    exit(EXIT_SUCCESS);
@@ -116,6 +123,9 @@ int main(int argc, char **argv)
 
     if (aflag && dflag)
 	fatal_msg("Error -a or -t, not both\n");
+
+    if (cflag && !dflag)
+	fatal_msg("Error -c must be used with -d");
 
 
     if (aflag)
@@ -160,7 +170,10 @@ int main(int argc, char **argv)
 	    cols = merge(fp, &vals, cols);
 	else {
 	    Length = getKeyLength(fp);
-	    mergeHash(fp);
+	    if (cflag)
+	        mergeHashComplement(fp);
+	    else
+	        mergeHash(fp);
 	}
 
 	if (fp != stdin)
@@ -262,5 +275,46 @@ void mergeHash(FILE * fp)
 	fscanf(fp, "%s%[\t]%u%[\n\r]", s, ch, &val, ch);
 	s[Length] = '\0';	/**<This line may be unnecessary**/
 	hashAdd(s, val);	// increments hash by value;
+    }
+}
+
+/**
+ * Merges all the rows in a (key,value) FFP and orders by hash key
+ *
+ * All the frequencies in a (key,value) FFP row are added together
+ * in a new hash.  The FFP in the file fp
+ * must be a (Key,value) FFP.
+ *
+ * @param fp A file pointer to an FFP
+ * @return None
+ */
+
+
+void mergeHashComplement(FILE * fp)
+{
+    unsigned val;
+    char ch[2];
+    char s[Length];
+    char *r; //reverse complement
+
+    while (!feof(fp)) {
+	fscanf(fp, "%s%[\t]%u%[\n\r]", s, ch, &val, ch);
+	s[Length] = '\0';	/**<This line may be unnecessary**/
+
+	r = strdup(s, Length);
+	rev(r,Length);
+	complement(r,Length);
+
+	// hash dna and rev complement, only store lower hash value for sorting
+	int hashSVal = (*hashf)(s);
+	int hashRVal = (*hashf)(r);
+
+	if (hashSVal < hashRVal) {
+    		hashAdd(s, val);	// increments hash by value;
+	} else {
+		hashAdd(r, val);
+	}
+
+	free(r);
     }
 }
