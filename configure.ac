@@ -6,6 +6,7 @@ AC_INIT([ffp], [3.19], [gsims1997@yahoo.com],[ffp],[http://sourceforge/projects/
 #  Define authors of the package
 AC_DEFINE([PACKAGE_AUTHORS], ["Gregory E. Sims"], [Authors of this package.])
 AC_DEFINE([COPY_YEAR], ["2009-2012"], [Copyright year.])
+AC_DEFINE([PACKAGE_URL], ["http://sourceforge/projects/ffp-phylogeny"], [Package URL.])
 #  Insert copyright notice in configure script
 AC_COPYRIGHT
 AC_CONFIG_AUX_DIR(config)
