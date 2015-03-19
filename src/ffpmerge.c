@@ -196,7 +196,7 @@ int main(int argc, char **argv)
 		printf("%u\t", hashval(keys[i]));
 	    printf("%u\n", hashval(keys[i]));
 	}
-	//printf("\n");
+	printf("\n");
 	freeHash();
 	//@todo Free keys?
     }
@@ -301,19 +301,15 @@ void mergeHashComplement(FILE * fp)
 	fscanf(fp, "%s%[\t]%u%[\n\r]", s, ch, &val, ch);
 	s[Length] = '\0';	/**<This line may be unnecessary**/
 
-	// for fixing bug where first character read is not a valid letter
-	if (!isalpha(s[0]))
-	    continue;
-
 	r = strdup(s, Length);
-	r[Length] = '\0';
 	rev(r,Length);
 	complement(r,Length);
 
-	// merge rev complemented values, store the string that's lowest
-	//printf("s=%s,r=%s\n",s,r);
+	// hash dna and rev complement, only store lower hash value for sorting
+	int hashSVal = (*hashf)(s);
+	int hashRVal = (*hashf)(r);
 
-	if (strcmp(s,r) <= 0) {
+	if (hashSVal < hashRVal) {
     		hashAdd(s, val);	// increments hash by value;
 	} else {
 		hashAdd(r, val);
