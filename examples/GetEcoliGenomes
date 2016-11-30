@@ -9,7 +9,7 @@
 for GENOME in $(cat ecoli_genomes.list) ; do 
 	mkdir -p $GENOME
 	sleep 2
-	wget "ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/$GENOME/*.fna"
+	wget "ftp://ftp.ncbi.nlm.nih.gov/genomes/archive/old_refseq/Bacteria/$GENOME/*.fna"
 	mv *.fna $GENOME
 	# move plasmids to their own subdir
 	cd $GENOME 
